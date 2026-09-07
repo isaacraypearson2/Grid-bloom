@@ -5,7 +5,7 @@ import Foundation
 struct FairDealer {
     var rng: SplitMix64
     var catalog: [Piece]
-    var maxRegenerateAttempts = 80
+    var maxRegenerateAttempts = 40
     /// Trays already dealt this run. Opening grace uses this, not occupancy alone.
     var traysDealt = 0
     var openingGraceTrays = 5
@@ -51,8 +51,12 @@ struct FairDealer {
     }
 
     mutating func pickWeighted(occupancy: Double) -> Piece {
+        guard !catalog.isEmpty else {
+            return Piece(id: UUID(), catalogID: "empty", cells: [GridPoint(x: 0, y: 0)], colorIndex: 0)
+        }
         let weights = catalog.map { weight(for: $0, occupancy: occupancy) }
         let index = weightedIndex(weights: weights)
+        guard catalog.indices.contains(index) else { return catalog[0] }
         return catalog[index]
     }
 
@@ -89,6 +93,7 @@ struct FairDealer {
     }
 
     private mutating func weightedIndex(weights: [Double]) -> Int {
+        guard !weights.isEmpty else { return 0 }
         let total = weights.reduce(0, +)
         guard total > 0 else { return rng.int(in: 0..<weights.count) }
         var ticket = rng.unitDouble() * total

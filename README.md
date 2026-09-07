@@ -6,6 +6,8 @@ Native **Swift + SpriteKit** core, **SwiftUI** menus and HUD. iPhone portrait, i
 
 ## How to run
 
+**Pull `main` before playing.** Recent builds include crash fixes (empty tray slots, and a watchdog hang when Classic / Today’s Bloom started). If Xcode still has an old checkout, `git pull origin main` then rebuild.
+
 1. Clone this repo and open **`Gridbloom.xcodeproj`** in Xcode 15 or later.
 2. Choose an **iPhone simulator** (iOS 16+).
 3. Press **Run** (⌘R).
@@ -63,7 +65,7 @@ No interstitials mid-run. Continue is capped at **one revive per run**.
 | `Scene/GameScene.swift` | Drag / snap, ceramic tiles, juice |
 | `UI/` | Menu, HUD, pause, settings, shop, onboarding |
 | `Monetization/` | StoreKit 2 shop, `AdServing`, `.storekit` file |
-| `GridbloomTests/` | Clears, scoring, combos, daily deals, dealing, continue, cosmetics |
+| `GridbloomTests/` | Clears, scoring, combos, daily deals, dealing, continue, cosmetics, layout, session-start stability |
 
 ## What’s left for the publisher
 

@@ -33,7 +33,9 @@ struct ContentView: View {
                     onSettings: { route = .settings }
                 )
             case .play(let mode):
+                // `.id(mode)` keeps Classic vs Daily as distinct StateObjects.
                 GameView(mode: mode, onExit: { route = .menu })
+                    .id(mode)
             case .settings:
                 SettingsView(settings: settings, theme: theme, onClose: { route = .menu })
             case .shop:

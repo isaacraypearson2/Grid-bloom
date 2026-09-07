@@ -1,5 +1,27 @@
 import SwiftUI
 import SpriteKit
+import Combine
+
+/// Owns the match and the SpriteKit scene together so SwiftUI `body` never
+/// reconstructs `GameState` / `GameScene` while evaluating `ContentView`.
+final class GameSession: ObservableObject {
+    let game: GameState
+    let scene: GameScene
+    private var forwarding: AnyCancellable?
+
+    init(mode: GameMode) {
+        let game = GameState(mode: mode)
+        self.game = game
+        self.scene = GameScene(
+            game: game,
+            size: CGSize(width: 390, height: 844),
+            theme: BoardTheme.theme(for: .garden, colorblind: false)
+        )
+        forwarding = game.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
+    }
+}
 
 struct GameView: View {
     @EnvironmentObject private var settings: AppSettings
@@ -7,8 +29,7 @@ struct GameView: View {
     @EnvironmentObject private var profile: PlayerProfile
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
-    @StateObject private var game: GameState
-    @State private var scene: GameScene
+    @StateObject private var session: GameSession
     @State private var showBloomBanner = false
     @State private var bannerCombo = 0
     @State private var paused = false
@@ -17,13 +38,15 @@ struct GameView: View {
     @State private var adMessage: String?
     var onExit: () -> Void
 
+    private var game: GameState { session.game }
+    private var scene: GameScene { session.scene }
+
     init(mode: GameMode, onExit: @escaping () -> Void) {
-        let state = GameState(mode: mode, profile: PlayerProfile.shared)
-        _game = StateObject(wrappedValue: state)
-        let theme = BoardTheme.theme(for: .garden, colorblind: false)
-        let sk = GameScene(game: state, size: CGSize(width: 390, height: 844), theme: theme)
-        _scene = State(initialValue: sk)
         self.onExit = onExit
+        // Keep `GameSession(...)` inside `StateObject(wrappedValue:)` so SwiftUI's
+        // autoclosure owns it. Never `let session = GameSession(...); _session = ...`
+        // — that reconstructs GameState on every parent `body` evaluation.
+        _session = StateObject(wrappedValue: GameSession(mode: mode))
         _showOnboarding = State(initialValue: !AppSettings.shared.hasCompletedOnboarding)
     }
 
@@ -98,14 +121,20 @@ struct GameView: View {
             SettingsView(settings: settings, theme: theme, onClose: { showSettings = false })
         }
         .onAppear {
+            // Store the profile pointer without publishing. Increment stats on the
+            // next run-loop turn so @Published updates cannot re-enter ContentView.body.
+            game.attachProfile(profile)
             scene.settings = settings
-            scene.apply(theme: theme)
+            scene.apply(theme: theme, colorblind: settings.colorblindPalette)
+            DispatchQueue.main.async {
+                game.recordSessionStartIfNeeded()
+            }
         }
         .onChange(of: cosmetics.selectedPack) { _ in
-            scene.apply(theme: cosmetics.resolvedTheme)
+            scene.apply(theme: cosmetics.resolvedTheme, colorblind: settings.colorblindPalette)
         }
         .onChange(of: settings.colorblindPalette) { _ in
-            scene.apply(theme: cosmetics.resolvedTheme)
+            scene.apply(theme: cosmetics.resolvedTheme, colorblind: settings.colorblindPalette)
         }
         .onChange(of: game.bloomPulse) { _ in
             bannerCombo = game.lastBloomCombo

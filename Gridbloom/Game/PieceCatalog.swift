@@ -57,12 +57,12 @@ enum PieceCatalog {
         make("F5_0", [(1, 0), (2, 0), (0, 1), (1, 1), (1, 2)], 1)
     ]
 
+    /// Stable placeholder so catalog templates are comparable; each deal clones via `spawned()`.
+    private static let templateID = UUID(uuidString: "00000000-0000-0000-0000-000000000000") ?? UUID()
+
     private static func make(_ id: String, _ cells: [(Int, Int)], _ color: Int) -> Piece {
         let points = cells.map { GridPoint(x: $0.0, y: $0.1) }
-        return Piece(id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
-                     catalogID: id,
-                     cells: points,
-                     colorIndex: color)
+        return Piece(id: templateID, catalogID: id, cells: points, colorIndex: color)
     }
 
     static func piece(catalogID: String) -> Piece? {

@@ -21,8 +21,10 @@ final class GameScene: SKScene {
     private var traySprites: [PieceSprite?] = [nil, nil, nil]
     private var ghostNode: PieceSprite?
 
-    private var drag: DragState?
-    private var inputLocked = false
+    private var lastLayoutSize: CGSize = .zero
+    private var hasDrawnOnce = false
+    private var appliedPack: CosmeticPack?
+    private var appliedColorblind: Bool?
 
     private var reducedMotion: Bool {
         settings?.prefersReducedMotion ?? UIAccessibility.isReduceMotionEnabled
@@ -64,11 +66,18 @@ final class GameScene: SKScene {
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard size.width > 1, size.height > 1 else { return }
+        let dw = abs(size.width - lastLayoutSize.width)
+        let dh = abs(size.height - lastLayoutSize.height)
+        guard dw > 0.5 || dh > 0.5 else { return }
         relayoutAndRedraw(animatedTray: false)
     }
 
-    func apply(theme: BoardTheme) {
+    func apply(theme: BoardTheme, colorblind: Bool = false) {
+        let unchanged = hasDrawnOnce && appliedPack == theme.pack && appliedColorblind == colorblind
         self.theme = theme
+        appliedPack = theme.pack
+        appliedColorblind = colorblind
+        guard !unchanged else { return }
         relayoutAndRedraw(animatedTray: false)
     }
 
@@ -85,7 +94,10 @@ final class GameScene: SKScene {
     /// Always runs layout before drawing so traySlots/boardRect exist even if
     /// SwiftUI presents the scene (onAppear → apply) before didMove(to:).
     private func relayoutAndRedraw(animatedTray: Bool) {
-        applyLayout(GameBoardLayout(sceneSize: size))
+        let layout = GameBoardLayout(sceneSize: size)
+        applyLayout(layout)
+        lastLayoutSize = size
+        hasDrawnOnce = true
         rebuildBoard()
         rebuildTray(animated: animatedTray)
     }
@@ -169,7 +181,9 @@ final class GameScene: SKScene {
         trayRoot.removeAllChildren()
         traySprites = [nil, nil, nil]
         for index in 0..<3 {
-            guard drag?.index != index, let piece = game.tray[index] else { continue }
+            guard drag?.index != index else { continue }
+            guard game.tray.indices.contains(index), let piece = game.tray[index] else { continue }
+            guard traySlots.indices.contains(index) else { continue }
             let sprite = PieceSprite(piece: piece, blockSize: cellSize, theme: theme)
             sprite.position = trayHome(for: piece, slot: traySlots[index])
             sprite.zPosition = 10
@@ -235,7 +249,9 @@ final class GameScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard !inputLocked, !isPausedOverlay, !game.isGameOver, drag == nil, let touch = touches.first else { return }
         let location = touch.location(in: self)
-        guard let index = hitTrayIndex(at: location), let sprite = traySprites[index] else { return }
+        guard let index = hitTrayIndex(at: location),
+              traySprites.indices.contains(index),
+              let sprite = traySprites[index] else { return }
 
         Haptics.light()
         SoundPlayer.shared.click()
@@ -333,7 +349,9 @@ final class GameScene: SKScene {
         }
         SoundPlayer.shared.place()
         sprite.removeFromParent()
-        traySprites[index] = nil
+        if traySprites.indices.contains(index) {
+            traySprites[index] = nil
+        }
 
         if result.clear.isEmpty {
             rebuildBoard()
@@ -420,9 +438,8 @@ final class GameScene: SKScene {
                 let dx = location.x - sprite.position.x
                 let dy = location.y - sprite.position.y
                 let d = dx * dx + dy * dy
-                if best == nil || d < best!.1 {
-                    best = (index, d)
-                }
+                if let current = best, d >= current.1 { continue }
+                best = (index, d)
             }
         }
         return best?.0
