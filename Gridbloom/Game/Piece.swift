@@ -1,0 +1,44 @@
+import Foundation
+
+/// Integer board coordinate. `x` is column (0 is left), `y` is row (0 is top).
+struct GridPoint: Hashable, Equatable, Sendable {
+    var x: Int
+    var y: Int
+
+    static func + (lhs: GridPoint, rhs: GridPoint) -> GridPoint {
+        GridPoint(x: lhs.x + rhs.x, y: lhs.y + rhs.y)
+    }
+}
+
+/// A single polyomino. Pieces never rotate at play time; each orientation is a distinct catalog entry.
+struct Piece: Identifiable, Equatable, Sendable {
+    let id: UUID
+    /// Stable shape key, e.g. `T4_0`, used for daily-run comparisons.
+    let catalogID: String
+    /// Cell offsets, normalized so the bounding box origin is (0, 0).
+    let cells: [GridPoint]
+    let colorIndex: Int
+
+    var cellCount: Int { cells.count }
+
+    var width: Int {
+        (cells.map(\.x).max() ?? 0) + 1
+    }
+
+    var height: Int {
+        (cells.map(\.y).max() ?? 0) + 1
+    }
+
+    func occupying(at origin: GridPoint) -> [GridPoint] {
+        cells.map { origin + $0 }
+    }
+
+    /// New instance with a unique id (used when dealing from the catalog).
+    func spawned(id: UUID = UUID()) -> Piece {
+        Piece(id: id, catalogID: catalogID, cells: cells, colorIndex: colorIndex)
+    }
+
+    static func == (lhs: Piece, rhs: Piece) -> Bool {
+        lhs.id == rhs.id
+    }
+}
