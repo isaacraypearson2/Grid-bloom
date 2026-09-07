@@ -1,0 +1,60 @@
+{
+  "identifier" : "B7E1D2C4",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "C0SMETIC01",
+      "localizations" : [
+        {
+          "description" : "Blush ceramic tiles and cherry petal bursts.",
+          "displayName" : "Sakura Petals",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.gridbloom.cosmetics.sakura",
+      "referenceName" : "Sakura Petals",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "C0SMETIC02",
+      "localizations" : [
+        {
+          "description" : "Cool porcelain tiles under a night garden.",
+          "displayName" : "Moonlight Garden",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.gridbloom.cosmetics.moonlight",
+      "referenceName" : "Moonlight Garden",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "C0SMETIC03",
+      "localizations" : [
+        {
+          "description" : "Warm honey tiles and golden petal FX.",
+          "displayName" : "Golden Sunflower",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.gridbloom.cosmetics.sunflower",
+      "referenceName" : "Golden Sunflower",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrorsEnabled" : false
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

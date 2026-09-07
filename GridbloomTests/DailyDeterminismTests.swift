@@ -40,12 +40,13 @@ final class DailyDeterminismTests: XCTestCase {
     }
 
     func testOccupancyDownWeightsBulkyPieces() throws {
-        let dealer = FairDealer(rng: SplitMix64(seed: 1))
+        var dealer = FairDealer(rng: SplitMix64(seed: 1))
+        dealer.traysDealt = 20
         let tromino = try XCTUnwrap(PieceCatalog.piece(catalogID: "I3_h"))
         let pentomino = try XCTUnwrap(PieceCatalog.piece(catalogID: "I5_h"))
-        XCTAssertEqual(dealer.weight(for: tromino, occupancy: 0.85), 1.0, accuracy: 0.0001)
-        XCTAssertLessThan(dealer.weight(for: pentomino, occupancy: 0.85), dealer.weight(for: tromino, occupancy: 0.85))
-        XCTAssertEqual(dealer.weight(for: pentomino, occupancy: 0), dealer.weight(for: tromino, occupancy: 0), accuracy: 0.0001)
+        XCTAssertEqual(dealer.occupancyWeight(for: tromino, occupancy: 0.85), 1.0, accuracy: 0.0001)
+        XCTAssertLessThan(dealer.occupancyWeight(for: pentomino, occupancy: 0.85), dealer.occupancyWeight(for: tromino, occupancy: 0.85))
+        XCTAssertEqual(dealer.occupancyWeight(for: pentomino, occupancy: 0), dealer.occupancyWeight(for: tromino, occupancy: 0), accuracy: 0.0001)
     }
 
     func testDealerRegeneratesUntilAPieceFitsWhenPossible() {

@@ -1,62 +1,62 @@
 import SwiftUI
 
 struct GameOverView: View {
+    var theme: BoardTheme
     var score: Int
     var best: Int
+    var canContinue: Bool
     var onRestart: () -> Void
     var onContinue: () -> Void
     var onMenu: () -> Void
 
     var body: some View {
-        VStack(spacing: 18) {
-            BloomMark(size: 64)
-            Text("Garden’s full")
-                .font(.system(.title, design: .rounded).weight(.bold))
-                .foregroundColor(GardenPalette.ink)
-            Text("No remaining piece fits the board.")
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundColor(GardenPalette.inkSoft)
-                .multilineTextAlignment(.center)
+        GardenCard(theme: theme) {
+            VStack(spacing: 16) {
+                BloomMark(size: 58, petal: theme.accent)
+                Text("Garden’s full")
+                    .font(.system(.title, design: .rounded).weight(.bold))
+                    .foregroundColor(theme.ink)
+                Text("No remaining piece fits. Restart, or bloom-revive once this run.")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+                    .multilineTextAlignment(.center)
 
-            HStack(spacing: 24) {
-                VStack {
-                    Text("Score").font(.caption).foregroundColor(GardenPalette.inkSoft)
-                    Text("\(score)").font(.title.bold())
+                HStack(spacing: 28) {
+                    VStack {
+                        Text("Score").font(.caption).foregroundColor(theme.inkSoft)
+                        Text("\(score)").font(.title.bold())
+                    }
+                    VStack {
+                        Text("Best").font(.caption).foregroundColor(theme.inkSoft)
+                        Text("\(best)").font(.title.bold())
+                    }
                 }
-                VStack {
-                    Text("Best").font(.caption).foregroundColor(GardenPalette.inkSoft)
-                    Text("\(best)").font(.title.bold())
+                .foregroundColor(theme.ink)
+
+                PrimaryGardenButton(title: "Restart", fill: theme.accent, action: onRestart)
+
+                if canContinue {
+                    PrimaryGardenButton(
+                        title: "Bloom revive  ·  once",
+                        fill: GardenPalette.dailyFill,
+                        action: onContinue
+                    )
+                    Text("Clears a few tiles and refills the tray. You choose when.")
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundColor(theme.inkSoft)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Revive already used this run.")
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundColor(theme.inkSoft)
                 }
-            }
-            .foregroundColor(GardenPalette.ink)
 
-            Button(action: onRestart) {
-                Text("Restart")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                Button("Menu", action: onMenu)
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+                    .padding(.top, 2)
             }
-            .buttonStyle(GardenButtonStyle(fill: GardenPalette.buttonFill))
-
-            Button(action: onContinue) {
-                Text("Continue  ·  bloom revive")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(GardenButtonStyle(fill: GardenPalette.dailyFill))
-
-            Button("Menu", action: onMenu)
-                .font(.system(.headline, design: .rounded))
-                .foregroundColor(GardenPalette.inkSoft)
-                .padding(.top, 4)
         }
-        .padding(28)
-        .background(GardenPalette.cream.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: GardenPalette.soil.opacity(0.35), radius: 24, y: 10)
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 24)
     }
 }

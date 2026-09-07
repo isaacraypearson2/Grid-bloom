@@ -32,15 +32,21 @@ final class GameState: ObservableObject {
     /// Increments whenever a combo ≥ 2 lands, so SwiftUI can play a banner.
     @Published private(set) var bloomPulse: Int = 0
     @Published private(set) var lastBloomCombo: Int = 0
+    @Published private(set) var continuesUsed: Int = 0
+    @Published private(set) var linesClearedThisRun: Int = 0
+
+    static let maxContinuesPerRun = 1
 
     private var dealer: FairDealer
     private let scoreStore: ScorePersisting
+    private let profile: PlayerProfile?
 
     init(
         mode: GameMode,
         utcDay: String? = nil,
         now: Date = Date(),
         scoreStore: ScorePersisting? = nil,
+        profile: PlayerProfile? = nil,
         rng: SplitMix64? = nil,
         board: Board = Board(),
         tray: [Piece?]? = nil,
@@ -52,6 +58,7 @@ final class GameState: ObservableObject {
         self.board = board
         self.tray = tray ?? [nil, nil, nil]
         self.scoreStore = scoreStore ?? UserDefaultsScoreStore()
+        self.profile = profile
         let seed: UInt64
         if let rng {
             self.dealer = FairDealer(rng: rng)
@@ -68,6 +75,12 @@ final class GameState: ObservableObject {
         if dealOnStart, tray == nil {
             dealTray()
             refreshGameOver()
+        }
+        if dealOnStart {
+            profile?.recordGameStarted()
+            if mode == .daily, let day {
+                profile?.recordDailyPlay(utcDay: day)
+            }
         }
     }
 
@@ -111,6 +124,10 @@ final class GameState: ObservableObject {
             lastBloomCombo = combo
             bloomPulse += 1
         }
+        if !clear.isEmpty {
+            linesClearedThisRun += clear.lineCount
+            profile?.record(lines: clear.lineCount, combo: combo)
+        }
 
         var refilled = false
         if tray.allSatisfy({ $0 == nil }) {
@@ -142,6 +159,8 @@ final class GameState: ObservableObject {
         isGameOver = false
         lastPlace = nil
         lastBloomCombo = 0
+        continuesUsed = 0
+        linesClearedThisRun = 0
         // Keep the daily seed so Today's Bloom is a fresh run of the same deal sequence.
         if mode == .daily, let utcDay {
             dealer = FairDealer(rng: SplitMix64(seed: DailySeed.seed(fromUTCDay: utcDay)))
@@ -151,10 +170,21 @@ final class GameState: ObservableObject {
         bestScore = scoreStore.best(for: mode, utcDay: utcDay)
         dealTray()
         refreshGameOver()
+        profile?.recordGameStarted()
+        if mode == .daily, let utcDay {
+            profile?.recordDailyPlay(utcDay: utcDay)
+        }
+    }
+
+    var canContinue: Bool {
+        continuesUsed < Self.maxContinuesPerRun
     }
 
     /// Rewarded-continue payload: clear a handful of occupied cells and refill the tray.
-    func applyRewardedContinue(clearedCellCount: Int = 8) {
+    @discardableResult
+    func applyRewardedContinue(clearedCellCount: Int = 8) -> Bool {
+        guard canContinue else { return false }
+        continuesUsed += 1
         var rng = dealer.rng
         let occupied = board.occupiedPoints().shuffled(using: &rng)
         dealer.rng = rng
@@ -164,6 +194,7 @@ final class GameState: ObservableObject {
         isGameOver = false
         dealTray()
         refreshGameOver()
+        return true
     }
 
     /// Rewarded tray shuffle: replace remaining pieces with a freshly dealt tray.

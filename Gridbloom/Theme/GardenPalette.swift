@@ -68,21 +68,23 @@ extension UIColor {
 }
 
 struct GardenBackground: View {
+    var theme: BoardTheme = BoardTheme.theme(for: .garden, colorblind: false)
+
     var body: some View {
         LinearGradient(
-            colors: [GardenPalette.backgroundTop, GardenPalette.backgroundBottom],
+            colors: [theme.backgroundTop, theme.backgroundBottom],
             startPoint: .top,
             endPoint: .bottom
         )
         .ignoresSafeArea()
         .overlay(alignment: .topTrailing) {
-            BloomMark(size: 64)
-                .opacity(0.28)
+            BloomMark(size: 64, petal: theme.accent)
+                .opacity(0.26)
                 .padding(28)
         }
         .overlay(alignment: .bottomLeading) {
-            BloomMark(size: 48)
-                .opacity(0.18)
+            BloomMark(size: 48, petal: theme.accent)
+                .opacity(0.16)
                 .padding(36)
         }
     }
@@ -90,12 +92,13 @@ struct GardenBackground: View {
 
 struct BloomMark: View {
     var size: CGFloat = 44
+    var petal: Color = GardenPalette.blossom
 
     var body: some View {
         ZStack {
             ForEach(0..<6, id: \.self) { index in
                 Capsule()
-                    .fill(GardenPalette.blossom.opacity(0.9))
+                    .fill(petal.opacity(0.9))
                     .frame(width: size * 0.22, height: size * 0.48)
                     .offset(y: -size * 0.18)
                     .rotationEffect(.degrees(Double(index) * 60))
