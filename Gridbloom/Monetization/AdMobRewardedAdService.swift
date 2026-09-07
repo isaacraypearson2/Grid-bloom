@@ -13,6 +13,7 @@ enum MobileAdsBootstrap {
         guard !didStart else { return }
         didStart = true
         let start = {
+            // App ID comes from Info.plist GADApplicationIdentifier (production).
             MobileAds.shared.start()
         }
         if Thread.isMainThread {

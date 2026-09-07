@@ -2,7 +2,7 @@
 
 Casual block-puzzle with a soft garden / bloom look — Block Blast energy, celadon tiles, and petal accents.
 
-Native **Swift + SpriteKit** core, **SwiftUI** menus and HUD. iPhone portrait, iOS 16+. Greenhouse uses **StoreKit 2**. Bloom revive and New tray use **Google Mobile Ads** rewarded ads (test units by default).
+Native **Swift + SpriteKit** core, **SwiftUI** menus and HUD. iPhone portrait, iOS 16+. Greenhouse uses **StoreKit 2**. Bloom revive and New tray use **Google Mobile Ads** rewarded ads (production AdMob IDs; DEBUG can force Google test units).
 
 ## How to run
 
@@ -65,27 +65,24 @@ Code is StoreKit 2 production-ready. Apple still needs the IAPs created in App S
 
 Revive and tray shuffle call `AdMobRewardedAdService` through `AdHub.service`. Ads are **player-initiated only**. No interstitials. Continue is capped at **one revive per run**. If an ad fails to load or show, the reward is **not** granted.
 
-### Test ads (default — works in Simulator now)
+Production IDs are wired in `AdConfig.swift` and `Info.plist`:
 
-The repo ships Google’s official sample IDs:
+- App ID: `ca-app-pub-9109033018957997~7145749382` (`GADApplicationIdentifier` + `productionApplicationID`)
+- Rewarded unit: `ca-app-pub-9109033018957997/6223067453` (`productionRewardedUnitID`)
 
-- App ID: `ca-app-pub-3940256099942544~1458002511` (`GADApplicationIdentifier` in `Gridbloom/Info.plist`)
-- Rewarded unit: `ca-app-pub-3940256099942544/1712485313` (`AdConfig.swift`)
+The AdMob account may still be **under review**. Until Google serves live fill, Bloom revive / New tray can show nothing (and must not grant a reward).
 
-On first Play → game over → **Bloom revive**, you should get a Google **test** rewarded ad. Same for Pause → **New tray**.
+### DEBUG escape hatch (Google test ads)
+
+If you need a guaranteed test ad in Simulator while the account is reviewing:
+
+1. In `Gridbloom/Monetization/AdConfig.swift`, set `forceGoogleTestAds = true` (**DEBUG builds only**; Release always uses production).
+2. Rebuild. Revive / New tray will request Google’s sample rewarded unit `ca-app-pub-3940256099942544/1712485313`.
+3. Set it back to `false` before shipping.
+
+`GADApplicationIdentifier` in Info.plist stays the production App ID (the SDK reads it at launch). Flip only the DEBUG flag — don’t put Google sample App IDs in a store build.
 
 `MockRewardedAdService` remains for unit tests. Do not point `AdHub.service` at the mock in the app target.
-
-### Swap in real AdMob IDs later (human)
-
-1. [AdMob](https://apps.admob.com) → Apps → **Add app** (iOS, bundle `com.gridbloom.app`). Copy the **App ID** (`ca-app-pub-…~…`).
-2. Create a **Rewarded** ad unit. Copy the **Ad unit ID** (`ca-app-pub-…/…`).
-3. In `Gridbloom/Monetization/AdConfig.swift`, paste them into:
-   - `productionApplicationID`
-   - `productionRewardedUnitID`
-4. In `Gridbloom/Info.plist`, set `GADApplicationIdentifier` to the **same** production App ID. The SDK reads App ID from Info.plist at launch; unit IDs come from `AdConfig`.
-5. Never ship the sample IDs in a store build — Google can suspend the account.
-6. Add the AdMob iOS app to the same Firebase/AdMob property if you use mediation later. Not required for this rewarded-only path.
 
 `SKAdNetworkItems` in Info.plist already includes Google’s published buyer list from the [Mobile Ads iOS quick start](https://developers.google.com/admob/ios/quick-start).
 
@@ -107,5 +104,5 @@ On first Play → game over → **Bloom revive**, you should get a Google **test
 
 - Apple Developer team, bundle ID, signing, screenshots, privacy nutrition labels.
 - App Store Connect IAP creation (checklist above).
-- AdMob app + rewarded unit creation, then paste IDs into `AdConfig` + Info.plist.
+- Wait for the AdMob account / app to finish review so production rewarded units fill. Until then, DEBUG `forceGoogleTestAds` can use Google sample ads.
 - Optional App Tracking Transparency prompt (not shown; ads still run as limited ads).
