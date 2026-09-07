@@ -37,6 +37,22 @@
 		A10000000000000000000089 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000088 /* SpriteKit.framework */; };
 		A10000000000000000000091 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* StoreKit.framework */; };
 		A10000000000000000000093 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* AVFoundation.framework */; };
+		A10000000000000000000101 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000100 /* AppSettings.swift */; };
+		A10000000000000000000103 /* PlayerProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000102 /* PlayerProfile.swift */; };
+		A10000000000000000000105 /* BoardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000104 /* BoardTheme.swift */; };
+		A10000000000000000000107 /* AdServing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000106 /* AdServing.swift */; };
+		A10000000000000000000109 /* CosmeticsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000108 /* CosmeticsStore.swift */; };
+		A10000000000000000000111 /* GardenComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000110 /* GardenComponents.swift */; };
+		A10000000000000000000113 /* PauseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* PauseView.swift */; };
+		A10000000000000000000115 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000114 /* SettingsView.swift */; };
+		A10000000000000000000117 /* ShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000116 /* ShopView.swift */; };
+		A10000000000000000000119 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000118 /* OnboardingView.swift */; };
+		A10000000000000000000121 /* combo.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000120 /* combo.wav */; };
+		A10000000000000000000123 /* ui.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000122 /* ui.wav */; };
+		A10000000000000000000125 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000124 /* LaunchScreen.storyboard */; };
+		A10000000000000000000131 /* FairDealerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000130 /* FairDealerTests.swift */; };
+		A10000000000000000000133 /* ContinueAndStreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000132 /* ContinueAndStreakTests.swift */; };
+		A10000000000000000000135 /* CosmeticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000134 /* CosmeticsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +98,23 @@
 		A10000000000000000000088 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = System/Library/Frameworks/SpriteKit.framework; sourceTree = SDKROOT; };
 		A10000000000000000000090 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		A10000000000000000000092 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		A10000000000000000000100 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A10000000000000000000102 /* PlayerProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfile.swift; sourceTree = "<group>"; };
+		A10000000000000000000104 /* BoardTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardTheme.swift; sourceTree = "<group>"; };
+		A10000000000000000000106 /* AdServing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdServing.swift; sourceTree = "<group>"; };
+		A10000000000000000000108 /* CosmeticsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticsStore.swift; sourceTree = "<group>"; };
+		A10000000000000000000110 /* GardenComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenComponents.swift; sourceTree = "<group>"; };
+		A10000000000000000000112 /* PauseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PauseView.swift; sourceTree = "<group>"; };
+		A10000000000000000000114 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A10000000000000000000116 /* ShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopView.swift; sourceTree = "<group>"; };
+		A10000000000000000000118 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A10000000000000000000120 /* combo.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = combo.wav; sourceTree = "<group>"; };
+		A10000000000000000000122 /* ui.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ui.wav; sourceTree = "<group>"; };
+		A10000000000000000000124 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A10000000000000000000126 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		A10000000000000000000130 /* FairDealerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairDealerTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000132 /* ContinueAndStreakTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueAndStreakTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000134 /* CosmeticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +172,8 @@
 			children = (
 				A10000000000000000000036 /* GridbloomApp.swift */,
 				A10000000000000000000038 /* ContentView.swift */,
+				A10000000000000000000124 /* LaunchScreen.storyboard */,
+				A10000000000000000000140 /* Settings */,
 				A10000000000000000000029 /* Theme */,
 				A10000000000000000000025 /* Game */,
 				A10000000000000000000026 /* Scene */,
@@ -155,6 +190,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000040 /* GardenPalette.swift */,
+				A10000000000000000000104 /* BoardTheme.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -170,6 +206,7 @@
 				A10000000000000000000052 /* FairDealer.swift */,
 				A10000000000000000000054 /* ScoreStore.swift */,
 				A10000000000000000000056 /* GameState.swift */,
+				A10000000000000000000102 /* PlayerProfile.swift */,
 			);
 			path = Game;
 			sourceTree = "<group>";
@@ -198,6 +235,11 @@
 				A10000000000000000000066 /* GameView.swift */,
 				A10000000000000000000068 /* HUDView.swift */,
 				A10000000000000000000070 /* GameOverView.swift */,
+				A10000000000000000000110 /* GardenComponents.swift */,
+				A10000000000000000000112 /* PauseView.swift */,
+				A10000000000000000000114 /* SettingsView.swift */,
+				A10000000000000000000116 /* ShopView.swift */,
+				A10000000000000000000118 /* OnboardingView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -206,6 +248,9 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000072 /* MonetizationHooks.swift */,
+				A10000000000000000000106 /* AdServing.swift */,
+				A10000000000000000000108 /* CosmeticsStore.swift */,
+				A10000000000000000000126 /* Products.storekit */,
 			);
 			path = Monetization;
 			sourceTree = "<group>";
@@ -216,6 +261,8 @@
 				A10000000000000000000074 /* click.wav */,
 				A10000000000000000000076 /* place.wav */,
 				A10000000000000000000078 /* clear.wav */,
+				A10000000000000000000120 /* combo.wav */,
+				A10000000000000000000122 /* ui.wav */,
 			);
 			path = Sounds;
 			sourceTree = "<group>";
@@ -227,8 +274,19 @@
 				A10000000000000000000082 /* ScoringTests.swift */,
 				A10000000000000000000084 /* ComboTests.swift */,
 				A10000000000000000000086 /* DailyDeterminismTests.swift */,
+				A10000000000000000000130 /* FairDealerTests.swift */,
+				A10000000000000000000132 /* ContinueAndStreakTests.swift */,
+				A10000000000000000000134 /* CosmeticsTests.swift */,
 			);
 			path = GridbloomTests;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000140 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000100 /* AppSettings.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -315,6 +373,9 @@
 				A10000000000000000000075 /* click.wav in Resources */,
 				A10000000000000000000077 /* place.wav in Resources */,
 				A10000000000000000000079 /* clear.wav in Resources */,
+				A10000000000000000000121 /* combo.wav in Resources */,
+				A10000000000000000000123 /* ui.wav in Resources */,
+				A10000000000000000000125 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,6 +405,16 @@
 				A10000000000000000000069 /* HUDView.swift in Sources */,
 				A10000000000000000000071 /* GameOverView.swift in Sources */,
 				A10000000000000000000073 /* MonetizationHooks.swift in Sources */,
+				A10000000000000000000101 /* AppSettings.swift in Sources */,
+				A10000000000000000000103 /* PlayerProfile.swift in Sources */,
+				A10000000000000000000105 /* BoardTheme.swift in Sources */,
+				A10000000000000000000107 /* AdServing.swift in Sources */,
+				A10000000000000000000109 /* CosmeticsStore.swift in Sources */,
+				A10000000000000000000111 /* GardenComponents.swift in Sources */,
+				A10000000000000000000113 /* PauseView.swift in Sources */,
+				A10000000000000000000115 /* SettingsView.swift in Sources */,
+				A10000000000000000000117 /* ShopView.swift in Sources */,
+				A10000000000000000000119 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,6 +426,9 @@
 				A10000000000000000000083 /* ScoringTests.swift in Sources */,
 				A10000000000000000000085 /* ComboTests.swift in Sources */,
 				A10000000000000000000087 /* DailyDeterminismTests.swift in Sources */,
+				A10000000000000000000131 /* FairDealerTests.swift in Sources */,
+				A10000000000000000000133 /* ContinueAndStreakTests.swift in Sources */,
+				A10000000000000000000135 /* CosmeticsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -504,6 +578,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -537,6 +612,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (

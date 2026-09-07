@@ -1,11 +1,14 @@
 import Foundation
 
 /// Deals trays of three pieces. High occupancy down-weights bulky pentominoes;
-/// trays are regenerated until at least one piece fits whenever that is possible.
+/// opening trays bias smaller shapes so early games feel fair.
 struct FairDealer {
     var rng: SplitMix64
     var catalog: [Piece]
     var maxRegenerateAttempts = 80
+    /// Trays already dealt this run. Opening grace uses this, not occupancy alone.
+    var traysDealt = 0
+    var openingGraceTrays = 5
 
     init(rng: SplitMix64, catalog: [Piece] = PieceCatalog.all) {
         self.rng = rng
@@ -13,17 +16,33 @@ struct FairDealer {
     }
 
     mutating func dealTray(on board: Board) -> [Piece] {
+        defer { traysDealt += 1 }
+        let desiredFits = traysDealt < openingGraceTrays ? 2 : 1
+
         if !board.canPlaceAny(from: catalog) {
             return randomTray(on: board)
         }
 
+        var best: [Piece] = []
+        var bestFits = -1
         for _ in 0..<maxRegenerateAttempts {
             let tray = randomTray(on: board)
-            if tray.contains(where: { board.canPlaceAnywhere($0) }) {
+            if traysDealt < openingGraceTrays, tray.allSatisfy({ $0.cellCount >= 5 }) {
+                continue
+            }
+            let fits = tray.filter { board.canPlaceAnywhere($0) }.count
+            if fits > bestFits {
+                best = tray
+                bestFits = fits
+            }
+            if fits >= desiredFits {
                 return tray
             }
         }
 
+        if bestFits > 0 {
+            return best
+        }
         return guaranteedFitTray(on: board)
     }
 
@@ -37,11 +56,26 @@ struct FairDealer {
         return catalog[index]
     }
 
-    /// Trominoes keep full weight; tetrominoes and pentominoes fall off as the board fills.
-    func weight(for piece: Piece, occupancy: Double) -> Double {
+    func occupancyWeight(for piece: Piece, occupancy: Double) -> Double {
         let bulkFactor = (Double(piece.cellCount) - 3.0) / 2.0
         let clampedBulk = min(1.0, max(0.0, bulkFactor))
         return max(0.05, 1.0 - occupancy * 0.85 * clampedBulk)
+    }
+
+    /// Occupancy curve plus an opening-game nudge toward trominoes.
+    func weight(for piece: Piece, occupancy: Double) -> Double {
+        occupancyWeight(for: piece, occupancy: occupancy) * openingMultiplier(for: piece)
+    }
+
+    func openingMultiplier(for piece: Piece) -> Double {
+        let early = max(0, 1.0 - Double(traysDealt) / Double(openingGraceTrays))
+        if piece.cellCount <= 3 {
+            return 1.0 + early * 0.85
+        }
+        if piece.cellCount >= 5 {
+            return 1.0 - early * 0.65
+        }
+        return 1.0 + early * 0.12
     }
 
     private mutating func guaranteedFitTray(on board: Board) -> [Piece] {

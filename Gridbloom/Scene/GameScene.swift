@@ -1,12 +1,14 @@
 import SpriteKit
 import UIKit
 
-/// SpriteKit board + tray. Drag pieces from the tray, snap with a green/red ghost,
-/// shake invalid drops back, and play clear / petal juice.
+/// SpriteKit board + tray with ceramic tiles, tuned juice, and Reduce Motion support.
 final class GameScene: SKScene {
     unowned var game: GameState
+    var theme: BoardTheme
+    weak var settings: AppSettings?
 
     var onNeedsHUD: (() -> Void)?
+    var isPausedOverlay = false
 
     private var cellSize: CGFloat = 40
     private var boardRect = CGRect.zero
@@ -15,11 +17,16 @@ final class GameScene: SKScene {
 
     private var boardRoot = SKNode()
     private var trayRoot = SKNode()
+    private var juiceRoot = SKNode()
     private var traySprites: [PieceSprite?] = [nil, nil, nil]
     private var ghostNode: PieceSprite?
 
     private var drag: DragState?
     private var inputLocked = false
+
+    private var reducedMotion: Bool {
+        settings?.prefersReducedMotion ?? UIAccessibility.isReduceMotionEnabled
+    }
 
     private struct DragState {
         var index: Int
@@ -29,8 +36,9 @@ final class GameScene: SKScene {
         var fingerLift: CGFloat
     }
 
-    init(game: GameState, size: CGSize) {
+    init(game: GameState, size: CGSize, theme: BoardTheme) {
         self.game = game
+        self.theme = theme
         super.init(size: size)
         scaleMode = .resizeFill
         backgroundColor = .clear
@@ -46,10 +54,11 @@ final class GameScene: SKScene {
         if boardRoot.parent == nil {
             addChild(boardRoot)
             addChild(trayRoot)
+            addChild(juiceRoot)
         }
         layout()
         rebuildBoard()
-        rebuildTray()
+        rebuildTray(animated: false)
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
@@ -57,23 +66,30 @@ final class GameScene: SKScene {
         guard oldSize != size, size.width > 1, size.height > 1 else { return }
         layout()
         rebuildBoard()
-        rebuildTray()
+        rebuildTray(animated: false)
+    }
+
+    func apply(theme: BoardTheme) {
+        self.theme = theme
+        rebuildBoard()
+        rebuildTray(animated: false)
     }
 
     func reloadFromState() {
         rebuildBoard()
-        rebuildTray()
+        rebuildTray(animated: !reducedMotion)
         clearGhost()
         drag = nil
         inputLocked = false
+        isPausedOverlay = false
     }
 
     // MARK: Layout
 
     private func layout() {
-        let margin: CGFloat = 18
-        let topPad: CGFloat = 10
-        let trayReserve: CGFloat = 158
+        let margin: CGFloat = size.width < 360 ? 12 : 18
+        let topPad: CGFloat = 8
+        let trayReserve = max(118, min(170, size.height * 0.21))
         let availableWidth = max(120, size.width - margin * 2)
         let availableHeight = max(120, size.height - topPad - trayReserve)
         cellSize = floor(min(availableWidth, availableHeight) / CGFloat(Board.size))
@@ -82,10 +98,10 @@ final class GameScene: SKScene {
         let originY = size.height - topPad - boardSide
         boardRect = CGRect(x: originX, y: originY, width: boardSide, height: boardSide)
 
-        let slotY = originY / 2
+        let slotY = max(48, originY * 0.48)
         let spacing = size.width / 4
-        traySlots = (0..<3).map { CGPoint(x: spacing * CGFloat($0 + 1), y: max(52, slotY)) }
-        trayScale = min(0.78, (spacing - 16) / (cellSize * 5))
+        traySlots = (0..<3).map { CGPoint(x: spacing * CGFloat($0 + 1), y: slotY) }
+        trayScale = min(0.78, max(0.52, (spacing - 14) / (cellSize * 5)))
     }
 
     // MARK: Board drawing
@@ -93,42 +109,45 @@ final class GameScene: SKScene {
     private func rebuildBoard() {
         boardRoot.removeAllChildren()
 
-        let well = SKShapeNode(rectOf: CGSize(width: boardRect.width + 16, height: boardRect.height + 16),
-                               cornerRadius: 18)
-        well.fillColor = GardenPalette.boardWellUI
-        well.strokeColor = UIColor.white.withAlphaComponent(0.35)
-        well.lineWidth = 1.5
+        let well = SKShapeNode(rectOf: CGSize(width: boardRect.width + 18, height: boardRect.height + 18),
+                               cornerRadius: 22)
+        well.fillColor = theme.well
+        well.strokeColor = UIColor.white.withAlphaComponent(0.42)
+        well.lineWidth = 1.6
         well.position = CGPoint(x: boardRect.midX, y: boardRect.midY)
         well.zPosition = 0
         boardRoot.addChild(well)
 
         for y in 0..<Board.size {
             for x in 0..<Board.size {
-                let empty = makeCellNode(fill: GardenPalette.emptyCellUI, stroke: GardenPalette.emptyStrokeUI)
+                let empty = makeEmptyCell()
                 empty.position = scenePoint(cell: GridPoint(x: x, y: y))
                 empty.zPosition = 1
                 boardRoot.addChild(empty)
 
                 let value = game.board[GridPoint(x: x, y: y)]
                 if value != 0 {
-                    let filled = makeCellNode(
-                        fill: GardenPalette.pieceFill(index: value - 1),
-                        stroke: GardenPalette.pieceStroke(index: value - 1)
+                    let filled = Juice.ceramicTile(
+                        size: cellSize * 0.9,
+                        fill: theme.pieceFill(index: value - 1),
+                        stroke: theme.pieceStroke(index: value - 1),
+                        theme: theme.pack
                     )
                     filled.position = empty.position
                     filled.zPosition = 2
+                    filled.name = "tile-\(x)-\(y)"
                     boardRoot.addChild(filled)
                 }
             }
         }
     }
 
-    private func makeCellNode(fill: UIColor, stroke: UIColor) -> SKShapeNode {
-        let inset = cellSize * 0.08
+    private func makeEmptyCell() -> SKShapeNode {
+        let inset = cellSize * 0.1
         let size = cellSize - inset
-        let node = SKShapeNode(path: Juice.roundedRectPath(size: CGSize(width: size, height: size), corner: size * 0.22))
-        node.fillColor = fill
-        node.strokeColor = stroke
+        let node = SKShapeNode(path: Juice.roundedRectPath(size: CGSize(width: size, height: size), corner: size * 0.24))
+        node.fillColor = theme.empty
+        node.strokeColor = theme.emptyStroke
         node.lineWidth = 1
         return node
     }
@@ -140,7 +159,6 @@ final class GameScene: SKScene {
         )
     }
 
-    /// Origin (top-left cell) under the piece root, which is drawn with y downward.
     private func origin(for piece: Piece, rootPosition: CGPoint) -> GridPoint {
         let firstCenter = CGPoint(x: rootPosition.x + cellSize * 0.5, y: rootPosition.y - cellSize * 0.5)
         let col = Int(floor((firstCenter.x - boardRect.minX) / cellSize))
@@ -150,21 +168,29 @@ final class GameScene: SKScene {
 
     // MARK: Tray
 
-    private func rebuildTray() {
+    private func rebuildTray(animated: Bool) {
         trayRoot.removeAllChildren()
         traySprites = [nil, nil, nil]
         for index in 0..<3 {
             guard drag?.index != index, let piece = game.tray[index] else { continue }
-            let sprite = PieceSprite(piece: piece, blockSize: cellSize)
-            sprite.setScale(trayScale * 0.82)
+            let sprite = PieceSprite(piece: piece, blockSize: cellSize, theme: theme)
             sprite.position = trayHome(for: piece, slot: traySlots[index])
             sprite.zPosition = 10
             trayRoot.addChild(sprite)
             traySprites[index] = sprite
-            sprite.run(.sequence([
-                .scale(to: trayScale * 1.06, duration: 0.12),
-                .scale(to: trayScale, duration: 0.1)
-            ]))
+            if animated, !reducedMotion {
+                sprite.setScale(trayScale * 0.78)
+                sprite.alpha = 0
+                sprite.run(.group([
+                    .fadeIn(withDuration: 0.16),
+                    .sequence([
+                        .scale(to: trayScale * 1.06, duration: 0.14),
+                        .scale(to: trayScale, duration: 0.1)
+                    ])
+                ]))
+            } else {
+                sprite.setScale(trayScale)
+            }
         }
     }
 
@@ -180,12 +206,13 @@ final class GameScene: SKScene {
         let snap = origin(for: piece, rootPosition: root)
         let valid = game.canPlace(piece, at: snap)
         if ghostNode == nil {
-            let ghost = PieceSprite(piece: piece, blockSize: cellSize, ghost: true, valid: valid)
+            let ghost = PieceSprite(piece: piece, blockSize: cellSize, ghost: true, valid: valid, theme: theme)
             ghost.zPosition = 8
             ghost.alpha = 0.95
             addChild(ghost)
             ghostNode = ghost
         } else {
+            ghostNode?.theme = theme
             ghostNode?.redraw(ghost: true, valid: valid)
         }
         ghostNode?.position = rootPoint(for: snap)
@@ -209,12 +236,13 @@ final class GameScene: SKScene {
     // MARK: Touches
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard !inputLocked, !game.isGameOver, drag == nil, let touch = touches.first else { return }
+        guard !inputLocked, !isPausedOverlay, !game.isGameOver, drag == nil, let touch = touches.first else { return }
         let location = touch.location(in: self)
         guard let index = hitTrayIndex(at: location), let sprite = traySprites[index] else { return }
 
         Haptics.light()
         SoundPlayer.shared.click()
+        sprite.removeAllActions()
         sprite.setScale(1)
         sprite.zPosition = 30
         let grabOffset = CGPoint(x: sprite.position.x - location.x, y: sprite.position.y - location.y)
@@ -234,10 +262,9 @@ final class GameScene: SKScene {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let drag else { return }
+        guard drag != nil else { return }
         finishDrag()
         self.drag = nil
-        _ = drag
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -273,12 +300,17 @@ final class GameScene: SKScene {
     private func invalidDrop(_ drag: DragState) {
         let sprite = drag.sprite
         inputLocked = true
+        let motion: SKAction = reducedMotion
+            ? .group([.move(to: drag.home, duration: 0.12), .scale(to: trayScale, duration: 0.12)])
+            : .sequence([
+                Juice.shake(),
+                .group([
+                    .move(to: drag.home, duration: 0.18),
+                    .scale(to: trayScale, duration: 0.18)
+                ])
+            ])
         sprite.run(.sequence([
-            Juice.shake(),
-            .group([
-                .move(to: drag.home, duration: 0.18),
-                .scale(to: trayScale, duration: 0.18)
-            ]),
+            motion,
             .run { [weak self] in
                 sprite.zPosition = 10
                 self?.inputLocked = false
@@ -294,58 +326,88 @@ final class GameScene: SKScene {
 
     private func commitPlacement(index: Int, origin: GridPoint, sprite: PieceSprite) {
         guard let result = game.place(trayIndex: index, at: origin) else {
-            if let drag {
-                invalidDrop(drag)
-            }
+            if let drag { invalidDrop(drag) }
             return
         }
-        Haptics.medium()
+        if result.combo >= 3 {
+            Haptics.heavy()
+        } else {
+            Haptics.medium()
+        }
         SoundPlayer.shared.place()
         sprite.removeFromParent()
         traySprites[index] = nil
 
         if result.clear.isEmpty {
             rebuildBoard()
-            rebuildTray()
+            popNewTiles(result.placedCells)
+            rebuildTray(animated: result.trayRefilled)
             onNeedsHUD?()
         } else {
             animateClear(result)
         }
     }
 
+    private func popNewTiles(_ cells: [GridPoint]) {
+        guard !reducedMotion else { return }
+        for point in cells where game.board[point] != 0 {
+            if let node = boardRoot.childNode(withName: "tile-\(point.x)-\(point.y)") {
+                node.setScale(0.86)
+                node.run(Juice.squashPop())
+            }
+        }
+    }
+
     private func animateClear(_ result: PlaceResult) {
         inputLocked = true
-        Haptics.success()
-        SoundPlayer.shared.bloom()
+        if result.combo >= 2 {
+            Haptics.success()
+            SoundPlayer.shared.bloom(combo: result.combo)
+        } else {
+            Haptics.medium()
+            SoundPlayer.shared.bloom(combo: 1)
+        }
         rebuildBoard()
+        popNewTiles(result.placedCells.filter { cell in
+            !result.clear.clearedCells.contains(cell)
+        })
 
+        let petalCount = reducedMotion ? 0 : min(18, 8 + result.combo * 3)
         for point in result.clear.clearedCells {
-            let flash = makeCellNode(
-                fill: GardenPalette.pieceFill(index: 2),
-                stroke: UIColor.white.withAlphaComponent(0.85)
+            let flash = Juice.ceramicTile(
+                size: cellSize * 0.92,
+                fill: theme.petal,
+                stroke: UIColor.white.withAlphaComponent(0.85),
+                theme: theme.pack
             )
             flash.position = scenePoint(cell: point)
             flash.zPosition = 25
-            addChild(flash)
+            juiceRoot.addChild(flash)
             Juice.burstPetals(
                 at: scenePoint(cell: point),
-                color: GardenPalette.pieceFill(index: 2),
-                in: self
+                color: theme.petal,
+                in: juiceRoot,
+                count: max(4, petalCount / max(1, result.clear.clearedCells.count / 2)),
+                style: theme.pack,
+                reduced: reducedMotion
             )
-            flash.run(.sequence([
-                .group([
-                    .scale(to: 1.32, duration: 0.1),
-                    .fadeOut(withDuration: 0.28)
-                ]),
-                .removeFromParent()
-            ]))
+            let fade: SKAction = reducedMotion
+                ? .sequence([.fadeOut(withDuration: 0.12), .removeFromParent()])
+                : .sequence([
+                    .group([.scale(to: 1.28, duration: 0.1), .fadeOut(withDuration: 0.28)]),
+                    .removeFromParent()
+                ])
+            flash.run(fade)
         }
 
+        Juice.screenShake(on: boardRoot, combo: result.combo, reduced: reducedMotion)
+
+        let wait = reducedMotion ? 0.14 : 0.34
         run(.sequence([
-            .wait(forDuration: 0.32),
+            .wait(forDuration: wait),
             .run { [weak self] in
                 guard let self else { return }
-                self.rebuildTray()
+                self.rebuildTray(animated: result.trayRefilled)
                 self.inputLocked = false
                 self.onNeedsHUD?()
             }
@@ -356,7 +418,7 @@ final class GameScene: SKScene {
         var best: (Int, CGFloat)?
         for (index, sprite) in traySprites.enumerated() {
             guard let sprite else { continue }
-            let box = sprite.calculateAccumulatedFrame().insetBy(dx: -18, dy: -18)
+            let box = sprite.calculateAccumulatedFrame().insetBy(dx: -22, dy: -22)
             if box.contains(location) {
                 let dx = location.x - sprite.position.x
                 let dy = location.y - sprite.position.y
