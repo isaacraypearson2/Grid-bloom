@@ -6,6 +6,11 @@ struct GridbloomApp: App {
     @StateObject private var cosmetics = CosmeticsStore()
     @StateObject private var profile = PlayerProfile.shared
 
+    init() {
+        MobileAdsBootstrap.startIfNeeded()
+        (AdHub.service as? AdMobRewardedAdService)?.preload()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

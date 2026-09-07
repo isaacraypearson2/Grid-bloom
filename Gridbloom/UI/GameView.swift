@@ -177,7 +177,10 @@ struct GameView: View {
             let granted = await MonetizationHooks.presentRewarded(.shuffleTray)
             await MainActor.run {
                 adMessage = nil
-                guard granted else { return }
+                guard granted else {
+                    Haptics.error()
+                    return
+                }
                 game.applyRewardedShuffle()
                 scene.reloadFromState()
                 paused = false
@@ -192,7 +195,10 @@ struct GameView: View {
             let granted = await MonetizationHooks.presentRewarded(.continueGame)
             await MainActor.run {
                 adMessage = nil
-                guard granted else { return }
+                guard granted else {
+                    Haptics.error()
+                    return
+                }
                 _ = game.applyRewardedContinue()
                 scene.reloadFromState()
                 paused = false

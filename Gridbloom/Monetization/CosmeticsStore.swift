@@ -2,13 +2,15 @@ import Foundation
 import StoreKit
 import Combine
 
-/// StoreKit 2 cosmetics. Load products from App Store Connect or the local `.storekit` file.
+/// StoreKit 2 cosmetics. Products come from App Store Connect, or from
+/// `Products.storekit` when that file is attached to the Gridbloom scheme.
 @MainActor
 final class CosmeticsStore: ObservableObject {
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedIDs: Set<String> = []
     @Published var selectedPack: CosmeticPack
     @Published private(set) var isLoading = false
+    @Published private(set) var isPurchasing = false
     @Published var lastError: String?
 
     private var updatesTask: Task<Void, Never>?
@@ -39,14 +41,31 @@ final class CosmeticsStore: ObservableObject {
         return products.first { $0.id == id }
     }
 
+    /// StoreKit localized price, or nil when the product has not loaded yet.
+    func displayPrice(for pack: CosmeticPack) -> String? {
+        product(for: pack)?.displayPrice
+    }
+
+    var paidProductCount: Int {
+        products.filter { MonetizationHooks.Cosmetics.allIDs.contains($0.id) }.count
+    }
+
     func load() async {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
         do {
             let loaded = try await Product.products(for: MonetizationHooks.Cosmetics.allIDs)
-            products = loaded.sorted { $0.displayName < $1.displayName }
+            products = CosmeticPack.allCases.compactMap { pack in
+                guard let id = pack.productID else { return nil }
+                return loaded.first { $0.id == id }
+            }
             await refreshEntitlements()
+            if products.isEmpty {
+                lastError = Self.missingProductsMessage
+            } else if paidProductCount < MonetizationHooks.Cosmetics.allIDs.count {
+                lastError = "Some Greenhouse packs did not load. \(Self.missingProductsMessage)"
+            }
         } catch {
             lastError = error.localizedDescription
             products = []
@@ -60,10 +79,15 @@ final class CosmeticsStore: ObservableObject {
     }
 
     func purchase(_ pack: CosmeticPack) async {
+        guard !isPurchasing else { return }
         guard let product = product(for: pack) else {
-            lastError = "Product isn’t available. Enable Products.storekit on the Gridbloom scheme, or create the IAP in App Store Connect."
+            lastError = Self.missingProductsMessage
+            await load()
             return
         }
+        isPurchasing = true
+        lastError = nil
+        defer { isPurchasing = false }
         do {
             let result = try await product.purchase()
             switch result {
@@ -72,19 +96,27 @@ final class CosmeticsStore: ObservableObject {
                 purchasedIDs.insert(transaction.productID)
                 select(pack)
                 await transaction.finish()
-            case .userCancelled, .pending:
+            case .userCancelled:
                 break
+            case .pending:
+                lastError = "Purchase is pending approval (Ask to Buy). It will unlock after it’s approved."
             @unknown default:
                 break
             }
         } catch {
             lastError = error.localizedDescription
         }
+        await refreshEntitlements()
     }
 
     func restore() async {
-        try? await AppStore.sync()
-        await refreshEntitlements()
+        lastError = nil
+        do {
+            try await AppStore.sync()
+            await refreshEntitlements()
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     private func refreshEntitlements() async {
@@ -114,4 +146,7 @@ final class CosmeticsStore: ObservableObject {
             return value
         }
     }
+
+    static let missingProductsMessage =
+        "No live prices yet. In Xcode: Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → Products.storekit. For TestFlight or the App Store, create matching non-consumable IAPs in App Store Connect."
 }

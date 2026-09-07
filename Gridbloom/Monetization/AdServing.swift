@@ -5,21 +5,23 @@ enum RewardedPlacement: String, Equatable {
     case shuffleTray
 }
 
-/// Ads are always player-initiated. Swap `MockRewardedAdService` for an AdMob adapter later.
+/// Ads are always player-initiated. The app target uses `AdMobRewardedAdService`.
+/// Tests assign `MockRewardedAdService` onto `AdHub.service`.
 protocol AdServing {
     func isReady(for placement: RewardedPlacement) -> Bool
     func showRewarded(placement: RewardedPlacement) async -> Bool
 }
 
-/// Local stub: a short pause, then grant. No SDK, no ad unit IDs, always builds.
+/// Local stub for unit tests. Never used as the app’s default `AdHub.service`.
 final class MockRewardedAdService: AdServing {
     var grantsReward = true
-    /// Keep this short so the flow feels like a thank-you, not a fake YouTube ad.
-    var delayNanoseconds: UInt64 = 900_000_000
+    var delayNanoseconds: UInt64 = 0
+    var showCount = 0
 
     func isReady(for placement: RewardedPlacement) -> Bool { true }
 
     func showRewarded(placement: RewardedPlacement) async -> Bool {
+        showCount += 1
         if delayNanoseconds > 0 {
             try? await Task.sleep(nanoseconds: delayNanoseconds)
         }
@@ -28,5 +30,6 @@ final class MockRewardedAdService: AdServing {
 }
 
 enum AdHub {
-    static var service: AdServing = MockRewardedAdService()
+    /// Live path: AdMob rewarded ads (Google test units until production IDs are set).
+    static var service: AdServing = AdMobRewardedAdService()
 }
