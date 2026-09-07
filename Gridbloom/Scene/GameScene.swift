@@ -21,6 +21,9 @@ final class GameScene: SKScene {
     private var traySprites: [PieceSprite?] = [nil, nil, nil]
     private var ghostNode: PieceSprite?
 
+    private var drag: DragState?
+    private var inputLocked = false
+
     private var lastLayoutSize: CGSize = .zero
     private var hasDrawnOnce = false
     private var appliedPack: CosmeticPack?
