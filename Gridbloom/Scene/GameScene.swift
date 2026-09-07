@@ -43,6 +43,8 @@ final class GameScene: SKScene {
         scaleMode = .resizeFill
         backgroundColor = .clear
         anchorPoint = .zero
+        // SpriteView may call apply(theme:) from SwiftUI onAppear *before* didMove(to:).
+        applyLayout(GameBoardLayout(sceneSize: size))
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -56,28 +58,22 @@ final class GameScene: SKScene {
             addChild(trayRoot)
             addChild(juiceRoot)
         }
-        layout()
-        rebuildBoard()
-        rebuildTray(animated: false)
+        relayoutAndRedraw(animatedTray: false)
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
-        guard oldSize != size, size.width > 1, size.height > 1 else { return }
-        layout()
-        rebuildBoard()
-        rebuildTray(animated: false)
+        guard size.width > 1, size.height > 1 else { return }
+        relayoutAndRedraw(animatedTray: false)
     }
 
     func apply(theme: BoardTheme) {
         self.theme = theme
-        rebuildBoard()
-        rebuildTray(animated: false)
+        relayoutAndRedraw(animatedTray: false)
     }
 
     func reloadFromState() {
-        rebuildBoard()
-        rebuildTray(animated: !reducedMotion)
+        relayoutAndRedraw(animatedTray: !reducedMotion)
         clearGhost()
         drag = nil
         inputLocked = false
@@ -86,22 +82,19 @@ final class GameScene: SKScene {
 
     // MARK: Layout
 
-    private func layout() {
-        let margin: CGFloat = size.width < 360 ? 12 : 18
-        let topPad: CGFloat = 8
-        let trayReserve = max(118, min(170, size.height * 0.21))
-        let availableWidth = max(120, size.width - margin * 2)
-        let availableHeight = max(120, size.height - topPad - trayReserve)
-        cellSize = floor(min(availableWidth, availableHeight) / CGFloat(Board.size))
-        let boardSide = cellSize * CGFloat(Board.size)
-        let originX = (size.width - boardSide) / 2
-        let originY = size.height - topPad - boardSide
-        boardRect = CGRect(x: originX, y: originY, width: boardSide, height: boardSide)
+    /// Always runs layout before drawing so traySlots/boardRect exist even if
+    /// SwiftUI presents the scene (onAppear → apply) before didMove(to:).
+    private func relayoutAndRedraw(animatedTray: Bool) {
+        applyLayout(GameBoardLayout(sceneSize: size))
+        rebuildBoard()
+        rebuildTray(animated: animatedTray)
+    }
 
-        let slotY = max(48, originY * 0.48)
-        let spacing = size.width / 4
-        traySlots = (0..<3).map { CGPoint(x: spacing * CGFloat($0 + 1), y: slotY) }
-        trayScale = min(0.78, max(0.52, (spacing - 14) / (cellSize * 5)))
+    private func applyLayout(_ layout: GameBoardLayout) {
+        cellSize = layout.cellSize
+        boardRect = layout.boardRect
+        traySlots = layout.traySlots
+        trayScale = layout.trayScale
     }
 
     // MARK: Board drawing
@@ -169,6 +162,10 @@ final class GameScene: SKScene {
     // MARK: Tray
 
     private func rebuildTray(animated: Bool) {
+        if traySlots.count < 3 {
+            applyLayout(GameBoardLayout(sceneSize: size))
+        }
+        guard traySlots.count >= 3 else { return }
         trayRoot.removeAllChildren()
         traySprites = [nil, nil, nil]
         for index in 0..<3 {
@@ -429,5 +426,37 @@ final class GameScene: SKScene {
             }
         }
         return best?.0
+    }
+}
+
+/// Pure layout for the 8×8 board and 3 tray slots. Always yields three slots,
+/// even when SpriteKit reports a zero size before the view is in the hierarchy.
+struct GameBoardLayout {
+    static let slotCount = 3
+
+    let cellSize: CGFloat
+    let boardRect: CGRect
+    let traySlots: [CGPoint]
+    let trayScale: CGFloat
+
+    init(sceneSize: CGSize) {
+        let width = max(sceneSize.width, 320)
+        let height = max(sceneSize.height, 568)
+        let margin: CGFloat = width < 360 ? 12 : 18
+        let topPad: CGFloat = 8
+        let trayReserve = max(118, min(170, height * 0.21))
+        let availableWidth = max(120, width - margin * 2)
+        let availableHeight = max(120, height - topPad - trayReserve)
+        let cell = max(8, floor(min(availableWidth, availableHeight) / CGFloat(Board.size)))
+        let boardSide = cell * CGFloat(Board.size)
+        let originX = (width - boardSide) / 2
+        let originY = height - topPad - boardSide
+        cellSize = cell
+        boardRect = CGRect(x: originX, y: originY, width: boardSide, height: boardSide)
+
+        let slotY = max(48, originY * 0.48)
+        let spacing = width / 4
+        traySlots = (0..<Self.slotCount).map { CGPoint(x: spacing * CGFloat($0 + 1), y: slotY) }
+        trayScale = min(0.78, max(0.52, (spacing - 14) / (cell * 5)))
     }
 }
