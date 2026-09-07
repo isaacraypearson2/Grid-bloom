@@ -8,26 +8,26 @@ final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
     @Published var soundEnabled: Bool {
-        didSet { defaults.set(soundEnabled, forKey: Keys.sound) }
+        didSet { persist(soundEnabled, key: Keys.sound) }
     }
     @Published var hapticsEnabled: Bool {
-        didSet { defaults.set(hapticsEnabled, forKey: Keys.haptics) }
+        didSet { persist(hapticsEnabled, key: Keys.haptics) }
     }
     @Published var colorblindPalette: Bool {
-        didSet { defaults.set(colorblindPalette, forKey: Keys.colorblind) }
+        didSet { persist(colorblindPalette, key: Keys.colorblind) }
     }
-    /// Extra reduce-motion even when the system setting is off.
     @Published var reduceMotion: Bool {
-        didSet { defaults.set(reduceMotion, forKey: Keys.reduceMotion) }
+        didSet { persist(reduceMotion, key: Keys.reduceMotion) }
     }
     @Published var hasCompletedOnboarding: Bool {
-        didSet { defaults.set(hasCompletedOnboarding, forKey: Keys.onboarding) }
+        didSet { persist(hasCompletedOnboarding, key: Keys.onboarding) }
     }
     @Published var selectedThemeID: String {
-        didSet { defaults.set(selectedThemeID, forKey: Keys.theme) }
+        didSet { persist(selectedThemeID, key: Keys.theme) }
     }
 
     private let defaults: UserDefaults
+    private var isHydrating = true
 
     private enum Keys {
         static let sound = "gridbloom.settings.sound"
@@ -54,6 +54,12 @@ final class AppSettings: ObservableObject {
         reduceMotion = defaults.bool(forKey: Keys.reduceMotion)
         hasCompletedOnboarding = defaults.bool(forKey: Keys.onboarding)
         selectedThemeID = defaults.string(forKey: Keys.theme) ?? CosmeticPack.garden.rawValue
+        isHydrating = false
+    }
+
+    private func persist<T>(_ value: T, key: String) {
+        guard !isHydrating else { return }
+        defaults.set(value, forKey: key)
     }
 
     /// Combines the in-app toggle with Settings → Accessibility → Motion.

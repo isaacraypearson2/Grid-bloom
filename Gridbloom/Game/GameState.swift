@@ -39,7 +39,8 @@ final class GameState: ObservableObject {
 
     private var dealer: FairDealer
     private let scoreStore: ScorePersisting
-    private let profile: PlayerProfile?
+    private var profile: PlayerProfile?
+    private var didRecordSessionStart = false
 
     init(
         mode: GameMode,
@@ -76,11 +77,23 @@ final class GameState: ObservableObject {
             dealTray()
             refreshGameOver()
         }
-        if dealOnStart {
-            profile?.recordGameStarted()
-            if mode == .daily, let day {
-                profile?.recordDailyPlay(utcDay: day)
-            }
+        // Do not touch PlayerProfile here. View.init / body evaluation must not
+        // publish environment objects or SwiftUI re-enters ContentView.body.
+    }
+
+    func attachProfile(_ profile: PlayerProfile) {
+        self.profile = profile
+    }
+
+    /// Call from `onAppear` (after the view is mounted), never from `View.init`.
+    /// Does nothing until a profile is attached so tests (and first-frame setup)
+    /// can construct `GameState` without publisher side effects.
+    func recordSessionStartIfNeeded() {
+        guard !didRecordSessionStart, let profile else { return }
+        didRecordSessionStart = true
+        profile.recordGameStarted()
+        if mode == .daily, let utcDay {
+            profile.recordDailyPlay(utcDay: utcDay)
         }
     }
 
@@ -170,9 +183,12 @@ final class GameState: ObservableObject {
         bestScore = scoreStore.best(for: mode, utcDay: utcDay)
         dealTray()
         refreshGameOver()
-        profile?.recordGameStarted()
-        if mode == .daily, let utcDay {
-            profile?.recordDailyPlay(utcDay: utcDay)
+        if profile != nil {
+            didRecordSessionStart = true
+            profile?.recordGameStarted()
+            if mode == .daily, let utcDay {
+                profile?.recordDailyPlay(utcDay: utcDay)
+            }
         }
     }
 
@@ -208,7 +224,10 @@ final class GameState: ObservableObject {
     }
 
     func dealTray() {
-        tray = dealer.dealTray(on: board).map { Optional($0) }
+        var next = dealer.dealTray(on: board).map { Optional($0) }
+        while next.count < 3 { next.append(nil) }
+        if next.count > 3 { next = Array(next.prefix(3)) }
+        tray = next
     }
 
     func refreshGameOver() {
@@ -223,8 +242,10 @@ final class GameState: ObservableObject {
     }
 
     func replaceTray(_ pieces: [Piece?]) {
-        precondition(pieces.count == 3)
-        tray = pieces
+        var next = pieces
+        while next.count < 3 { next.append(nil) }
+        if next.count > 3 { next = Array(next.prefix(3)) }
+        tray = next
     }
 
     func setCombo(_ value: Int) {

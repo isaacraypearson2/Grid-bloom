@@ -20,12 +20,26 @@ struct Board: Equatable, Sendable {
     private(set) var cells: [[Int]]
 
     init(filled: [[Int]]? = nil) {
-        if let filled {
-            precondition(filled.count == Board.size && filled.allSatisfy { $0.count == Board.size })
-            cells = filled
-        } else {
-            cells = Array(repeating: Array(repeating: 0, count: Board.size), count: Board.size)
+        cells = Self.normalized(filled)
+    }
+
+    /// Always an 8×8 grid. Truncates or pads rather than crashing on bad input.
+    private static func normalized(_ filled: [[Int]]?) -> [[Int]] {
+        let emptyRow = Array(repeating: 0, count: size)
+        guard let filled else {
+            return Array(repeating: emptyRow, count: size)
         }
+        var rows: [[Int]] = []
+        rows.reserveCapacity(size)
+        for y in 0..<size {
+            let source = y < filled.count ? filled[y] : []
+            var row = Array(source.prefix(size))
+            if row.count < size {
+                row.append(contentsOf: Array(repeating: 0, count: size - row.count))
+            }
+            rows.append(row)
+        }
+        return rows
     }
 
     var occupiedCount: Int {
@@ -38,7 +52,8 @@ struct Board: Equatable, Sendable {
     }
 
     subscript(point: GridPoint) -> Int {
-        cells[point.y][point.x]
+        guard isInBounds(point) else { return 0 }
+        return cells[point.y][point.x]
     }
 
     func isInBounds(_ point: GridPoint) -> Bool {
@@ -79,9 +94,9 @@ struct Board: Equatable, Sendable {
     }
 
     mutating func place(_ piece: Piece, at origin: GridPoint) {
-        precondition(canPlace(piece, at: origin), "Invalid placement")
+        guard canPlace(piece, at: origin) else { return }
         let value = piece.colorIndex + 1
-        for point in piece.occupying(at: origin) {
+        for point in piece.occupying(at: origin) where isInBounds(point) {
             cells[point.y][point.x] = value
         }
     }
@@ -127,17 +142,19 @@ struct Board: Equatable, Sendable {
     }
 
     mutating func fill(_ point: GridPoint, value: Int) {
-        precondition(isInBounds(point))
+        guard isInBounds(point) else { return }
         cells[point.y][point.x] = value
     }
 
     mutating func fillRow(_ y: Int, value: Int = 1) {
+        guard (0..<Board.size).contains(y) else { return }
         for x in 0..<Board.size {
             cells[y][x] = value
         }
     }
 
     mutating func fillColumn(_ x: Int, value: Int = 1) {
+        guard (0..<Board.size).contains(x) else { return }
         for y in 0..<Board.size {
             cells[y][x] = value
         }
@@ -154,10 +171,15 @@ struct Board: Equatable, Sendable {
     }
 
     private func rowFilled(_ y: Int) -> Bool {
-        cells[y].allSatisfy { $0 != 0 }
+        guard cells.indices.contains(y) else { return false }
+        return cells[y].allSatisfy { $0 != 0 }
     }
 
     private func columnFilled(_ x: Int) -> Bool {
-        (0..<Board.size).allSatisfy { cells[$0][x] != 0 }
+        guard (0..<Board.size).contains(x) else { return false }
+        return (0..<Board.size).allSatisfy { row in
+            guard cells.indices.contains(row), cells[row].indices.contains(x) else { return false }
+            return cells[row][x] != 0
+        }
     }
 }

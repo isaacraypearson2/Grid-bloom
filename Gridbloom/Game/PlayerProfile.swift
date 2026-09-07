@@ -87,7 +87,7 @@ final class PlayerProfile: ObservableObject {
         let parts = day.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? TimeZone(identifier: "GMT") ?? .current
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }

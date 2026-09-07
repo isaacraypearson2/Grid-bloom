@@ -54,6 +54,7 @@
 		A10000000000000000000133 /* ContinueAndStreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000132 /* ContinueAndStreakTests.swift */; };
 		A10000000000000000000135 /* CosmeticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000134 /* CosmeticsTests.swift */; };
 		A10000000000000000000151 /* GameLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000150 /* GameLayoutTests.swift */; };
+		A10000000000000000000153 /* GameStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000152 /* GameStabilityTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,6 +118,7 @@
 		A10000000000000000000132 /* ContinueAndStreakTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueAndStreakTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000134 /* CosmeticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticsTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000150 /* GameLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLayoutTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000152 /* GameStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStabilityTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -280,6 +282,7 @@
 				A10000000000000000000132 /* ContinueAndStreakTests.swift */,
 				A10000000000000000000134 /* CosmeticsTests.swift */,
 				A10000000000000000000150 /* GameLayoutTests.swift */,
+				A10000000000000000000152 /* GameStabilityTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -433,6 +436,7 @@
 				A10000000000000000000133 /* ContinueAndStreakTests.swift in Sources */,
 				A10000000000000000000135 /* CosmeticsTests.swift in Sources */,
 				A10000000000000000000151 /* GameLayoutTests.swift in Sources */,
+				A10000000000000000000153 /* GameStabilityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
