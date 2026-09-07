@@ -18,7 +18,7 @@ struct PauseView: View {
                     .foregroundColor(theme.inkSoft)
 
                 PrimaryGardenButton(title: "Resume", fill: theme.accent, action: onResume)
-                PrimaryGardenButton(title: "New tray  ·  thank-you bloom", fill: GardenPalette.dailyFill, action: onShuffle)
+                PrimaryGardenButton(title: "New tray  ·  short bloom", fill: GardenPalette.dailyFill, action: onShuffle)
                 Button("Settings", action: onSettings)
                     .font(.system(.headline, design: .rounded))
                     .foregroundColor(theme.ink)

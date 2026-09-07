@@ -55,6 +55,10 @@
 		A10000000000000000000135 /* CosmeticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000134 /* CosmeticsTests.swift */; };
 		A10000000000000000000151 /* GameLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000150 /* GameLayoutTests.swift */; };
 		A10000000000000000000153 /* GameStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000152 /* GameStabilityTests.swift */; };
+		A10000000000000000000161 /* AdConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000160 /* AdConfig.swift */; };
+		A10000000000000000000163 /* AdMobRewardedAdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000162 /* AdMobRewardedAdService.swift */; };
+		A10000000000000000000166 /* AdConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000165 /* AdConfigTests.swift */; };
+		A10000000000000000000171 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000172 /* GoogleMobileAds */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -119,6 +123,10 @@
 		A10000000000000000000134 /* CosmeticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticsTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000150 /* GameLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLayoutTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000152 /* GameStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStabilityTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000160 /* AdConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdConfig.swift; sourceTree = "<group>"; };
+		A10000000000000000000162 /* AdMobRewardedAdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobRewardedAdService.swift; sourceTree = "<group>"; };
+		A10000000000000000000164 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000165 /* AdConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdConfigTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,6 +137,7 @@
 				A10000000000000000000089 /* SpriteKit.framework in Frameworks */,
 				A10000000000000000000091 /* StoreKit.framework in Frameworks */,
 				A10000000000000000000093 /* AVFoundation.framework in Frameworks */,
+				A10000000000000000000171 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +185,7 @@
 			children = (
 				A10000000000000000000036 /* GridbloomApp.swift */,
 				A10000000000000000000038 /* ContentView.swift */,
+				A10000000000000000000164 /* Info.plist */,
 				A10000000000000000000124 /* LaunchScreen.storyboard */,
 				A10000000000000000000140 /* Settings */,
 				A10000000000000000000029 /* Theme */,
@@ -253,6 +263,8 @@
 			children = (
 				A10000000000000000000072 /* MonetizationHooks.swift */,
 				A10000000000000000000106 /* AdServing.swift */,
+				A10000000000000000000160 /* AdConfig.swift */,
+				A10000000000000000000162 /* AdMobRewardedAdService.swift */,
 				A10000000000000000000108 /* CosmeticsStore.swift */,
 				A10000000000000000000126 /* Products.storekit */,
 			);
@@ -283,6 +295,7 @@
 				A10000000000000000000134 /* CosmeticsTests.swift */,
 				A10000000000000000000150 /* GameLayoutTests.swift */,
 				A10000000000000000000152 /* GameStabilityTests.swift */,
+				A10000000000000000000165 /* AdConfigTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -311,6 +324,9 @@
 			dependencies = (
 			);
 			name = Gridbloom;
+			packageProductDependencies = (
+				A10000000000000000000172 /* GoogleMobileAds */,
+			);
 			productName = Gridbloom;
 			productReference = A10000000000000000000004 /* Gridbloom.app */;
 			productType = "com.apple.product-type.application";
@@ -360,6 +376,9 @@
 				Base,
 			);
 			mainGroup = A10000000000000000000020;
+			packageReferences = (
+				A10000000000000000000170 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			productRefGroup = A10000000000000000000023 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -415,6 +434,8 @@
 				A10000000000000000000103 /* PlayerProfile.swift in Sources */,
 				A10000000000000000000105 /* BoardTheme.swift in Sources */,
 				A10000000000000000000107 /* AdServing.swift in Sources */,
+				A10000000000000000000161 /* AdConfig.swift in Sources */,
+				A10000000000000000000163 /* AdMobRewardedAdService.swift in Sources */,
 				A10000000000000000000109 /* CosmeticsStore.swift in Sources */,
 				A10000000000000000000111 /* GardenComponents.swift in Sources */,
 				A10000000000000000000113 /* PauseView.swift in Sources */,
@@ -437,6 +458,7 @@
 				A10000000000000000000135 /* CosmeticsTests.swift in Sources */,
 				A10000000000000000000151 /* GameLayoutTests.swift in Sources */,
 				A10000000000000000000153 /* GameStabilityTests.swift in Sources */,
+				A10000000000000000000166 /* AdConfigTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -581,6 +603,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Gridbloom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Gridbloom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -594,6 +617,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.gridbloom.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -615,6 +642,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Gridbloom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Gridbloom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -628,6 +656,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.gridbloom.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -709,6 +741,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A10000000000000000000170 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000172 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000170 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A10000000000000000000001 /* Project object */;
 }

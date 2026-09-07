@@ -18,7 +18,7 @@
       "type" : "NonConsumable"
     },
     {
-      "displayPrice" : "0.99",
+      "displayPrice" : "1.99",
       "familyShareable" : false,
       "internalID" : "C0SMETIC02",
       "localizations" : [
@@ -33,7 +33,7 @@
       "type" : "NonConsumable"
     },
     {
-      "displayPrice" : "0.99",
+      "displayPrice" : "2.99",
       "familyShareable" : false,
       "internalID" : "C0SMETIC03",
       "localizations" : [
@@ -50,7 +50,9 @@
   ],
   "settings" : {
     "_failTransactionsEnabled" : false,
-    "_storeKitErrorsEnabled" : false
+    "_locale" : "en_US",
+    "_storeKitErrorsEnabled" : false,
+    "_storefront" : "USA"
   },
   "subscriptionGroups" : [],
   "version" : {

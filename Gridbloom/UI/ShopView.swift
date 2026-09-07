@@ -24,7 +24,7 @@ struct ShopView: View {
                     IconCircleButton(systemName: "xmark", label: "Close", theme: theme, action: onClose)
                 }
 
-                if store.isLoading {
+                if store.isLoading && store.products.isEmpty {
                     ProgressView("Checking the greenhouse…")
                         .frame(maxWidth: .infinity)
                         .padding(.top, 24)
@@ -39,10 +39,17 @@ struct ShopView: View {
                     .padding(.bottom, 12)
                 }
 
-                if store.products.isEmpty && !store.isLoading {
-                    Text("No live prices yet. In Xcode choose the Gridbloom scheme → Run → Options → StoreKit Configuration → Products.storekit.")
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundColor(theme.inkSoft)
+                if let error = store.lastError, !store.isLoading {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(error)
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(theme.inkSoft)
+                        Button("Try again") {
+                            Task { await store.load() }
+                        }
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundColor(theme.accent)
+                    }
                 }
 
                 Button("Restore purchases") {
@@ -52,6 +59,7 @@ struct ShopView: View {
                 .foregroundColor(theme.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)
+                .disabled(store.isLoading || store.isPurchasing)
             }
             .padding(22)
         }
@@ -86,16 +94,7 @@ struct ShopView: View {
                     .background(theme.accent)
                     .clipShape(Capsule())
             } else {
-                Button(product?.displayPrice ?? "…") {
-                    Task { await store.purchase(pack) }
-                }
-                .font(.system(.subheadline, design: .rounded).weight(.bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(GardenPalette.dailyFill)
-                .clipShape(Capsule())
-                .disabled(product == nil && !pack.isFree)
+                buyButton(pack: pack, product: product)
             }
         }
         .padding(14)
@@ -105,5 +104,36 @@ struct ShopView: View {
                 .stroke(selected ? theme.accent.opacity(0.55) : Color.clear, lineWidth: 1.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func buyButton(pack: CosmeticPack, product: Product?) -> some View {
+        if store.isLoading, product == nil {
+            ProgressView()
+                .tint(theme.accent)
+                .frame(width: 44, height: 32)
+        } else if let price = product?.displayPrice {
+            Button(price) {
+                Task { await store.purchase(pack) }
+            }
+            .font(.system(.subheadline, design: .rounded).weight(.bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(GardenPalette.dailyFill)
+            .clipShape(Capsule())
+            .disabled(store.isPurchasing)
+            .accessibilityLabel("Buy \(pack.title) for \(price)")
+        } else {
+            Button("Unavailable") {
+                Task { await store.load() }
+            }
+            .font(.system(.subheadline, design: .rounded).weight(.bold))
+            .foregroundColor(theme.inkSoft)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(theme.cream)
+            .clipShape(Capsule())
+        }
     }
 }

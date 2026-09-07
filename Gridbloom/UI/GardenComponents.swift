@@ -68,7 +68,7 @@ struct AdInterludeView: View {
             Text(title)
                 .font(.system(.title3, design: .rounded).weight(.bold))
                 .foregroundColor(theme.ink)
-            Text("A short thank-you bloom.\nNo mid-game interruptions — you asked for this.")
+            Text("A short rewarded bloom.\nNo mid-game interruptions — you asked for this.")
                 .font(.system(.footnote, design: .rounded))
                 .foregroundColor(theme.inkSoft)
                 .multilineTextAlignment(.center)
