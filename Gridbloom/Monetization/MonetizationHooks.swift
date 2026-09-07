@@ -1,7 +1,7 @@
 import Foundation
-import StoreKit
 
-/// Tasteful monetization surface. Ads are player-initiated; cosmetics use StoreKit 2.
+/// Tasteful monetization surface. Ads are player-initiated.
+/// Cosmetic IDs remain as local entitlement keys (StoreKit catalog is unused by the shop).
 enum MonetizationHooks {
     enum Cosmetics {
         static let sakuraPetals = "com.gridbloom.cosmetics.sakura"

@@ -2,23 +2,29 @@ import Foundation
 import StoreKit
 import Combine
 
-/// StoreKit 2 cosmetics. Products come from App Store Connect, or from
-/// `Products.storekit` when that file is attached to the Gridbloom scheme.
+/// Cosmetic packs. Garden Clay is free; other packs unlock by watching one rewarded ad.
+/// Unlocks persist locally. Leftover StoreKit purchases (if any) still count as owned.
 @MainActor
 final class CosmeticsStore: ObservableObject {
-    @Published private(set) var products: [Product] = []
-    @Published private(set) var purchasedIDs: Set<String> = []
+    @Published private(set) var unlockedIDs: Set<String> = []
     @Published var selectedPack: CosmeticPack
-    @Published private(set) var isLoading = false
-    @Published private(set) var isPurchasing = false
+    @Published private(set) var isUnlocking = false
+    @Published private(set) var unlockingPack: CosmeticPack?
     @Published var lastError: String?
 
     private var updatesTask: Task<Void, Never>?
     private let settings: AppSettings
+    private let defaults: UserDefaults
 
-    init(settings: AppSettings = .shared) {
+    private enum Keys {
+        static let unlocked = "gridbloom.cosmetics.unlockedIDs"
+    }
+
+    init(settings: AppSettings = .shared, defaults: UserDefaults = .standard) {
         self.settings = settings
+        self.defaults = defaults
         selectedPack = CosmeticPack(rawValue: settings.selectedThemeID) ?? .garden
+        unlockedIDs = Self.loadLocalIDs(from: defaults)
         updatesTask = Task { [weak self] in
             for await update in Transaction.updates {
                 await self?.handle(update)
@@ -33,42 +39,16 @@ final class CosmeticsStore: ObservableObject {
     func isOwned(_ pack: CosmeticPack) -> Bool {
         if pack.isFree { return true }
         guard let id = pack.productID else { return false }
-        return purchasedIDs.contains(id)
-    }
-
-    func product(for pack: CosmeticPack) -> Product? {
-        guard let id = pack.productID else { return nil }
-        return products.first { $0.id == id }
-    }
-
-    /// StoreKit localized price, or nil when the product has not loaded yet.
-    func displayPrice(for pack: CosmeticPack) -> String? {
-        product(for: pack)?.displayPrice
-    }
-
-    var paidProductCount: Int {
-        products.filter { MonetizationHooks.Cosmetics.allIDs.contains($0.id) }.count
+        return unlockedIDs.contains(id)
     }
 
     func load() async {
-        isLoading = true
         lastError = nil
-        defer { isLoading = false }
-        do {
-            let loaded = try await Product.products(for: MonetizationHooks.Cosmetics.allIDs)
-            products = CosmeticPack.allCases.compactMap { pack in
-                guard let id = pack.productID else { return nil }
-                return loaded.first { $0.id == id }
-            }
-            await refreshEntitlements()
-            if products.isEmpty {
-                lastError = Self.missingProductsMessage
-            } else if paidProductCount < MonetizationHooks.Cosmetics.allIDs.count {
-                lastError = "Some Greenhouse packs did not load. \(Self.missingProductsMessage)"
-            }
-        } catch {
-            lastError = error.localizedDescription
-            products = []
+        unlockedIDs = Self.loadLocalIDs(from: defaults)
+        await mergeStoreKitEntitlements()
+        persist()
+        if !isOwned(selectedPack) {
+            select(.garden)
         }
     }
 
@@ -78,63 +58,68 @@ final class CosmeticsStore: ObservableObject {
         settings.selectedThemeID = pack.rawValue
     }
 
-    func purchase(_ pack: CosmeticPack) async {
-        guard !isPurchasing else { return }
-        guard let product = product(for: pack) else {
-            lastError = Self.missingProductsMessage
-            await load()
+    /// One rewarded ad = one unlock attempt. Grants only if the reward is earned.
+    func unlockByWatchingAd(_ pack: CosmeticPack) async {
+        guard !pack.isFree, !isOwned(pack), !isUnlocking else { return }
+        guard pack.productID != nil else { return }
+        isUnlocking = true
+        unlockingPack = pack
+        lastError = nil
+        defer {
+            isUnlocking = false
+            unlockingPack = nil
+        }
+        let granted = await MonetizationHooks.presentRewarded(.unlockCosmetic)
+        guard granted else {
+            lastError = "The bloom didn’t finish. Watch again to unlock."
             return
         }
-        isPurchasing = true
-        lastError = nil
-        defer { isPurchasing = false }
-        do {
-            let result = try await product.purchase()
-            switch result {
-            case .success(let verification):
-                let transaction = try checkVerified(verification)
-                purchasedIDs.insert(transaction.productID)
-                select(pack)
-                await transaction.finish()
-            case .userCancelled:
-                break
-            case .pending:
-                lastError = "Purchase is pending approval (Ask to Buy). It will unlock after it’s approved."
-            @unknown default:
-                break
-            }
-        } catch {
-            lastError = error.localizedDescription
-        }
-        await refreshEntitlements()
+        grantUnlock(pack)
+        select(pack)
     }
 
+    /// Imports leftover StoreKit purchases into local unlocks. Ad unlocks already persist on device.
     func restore() async {
         lastError = nil
         do {
             try await AppStore.sync()
-            await refreshEntitlements()
         } catch {
-            lastError = error.localizedDescription
+            // Sync can fail when there is no IAP; local ad-unlocks are unchanged.
         }
-    }
-
-    private func refreshEntitlements() async {
-        var owned = Set<String>()
-        for await entitlement in Transaction.currentEntitlements {
-            if let transaction = try? checkVerified(entitlement) {
-                owned.insert(transaction.productID)
-            }
-        }
-        purchasedIDs = owned
+        await mergeStoreKitEntitlements()
+        persist()
         if !isOwned(selectedPack) {
             select(.garden)
         }
     }
 
+    private func grantUnlock(_ pack: CosmeticPack) {
+        guard let id = pack.productID else { return }
+        unlockedIDs.insert(id)
+        persist()
+    }
+
+    private func persist() {
+        defaults.set(Array(unlockedIDs).sorted(), forKey: Keys.unlocked)
+    }
+
+    private static func loadLocalIDs(from defaults: UserDefaults) -> Set<String> {
+        let stored = defaults.stringArray(forKey: Keys.unlocked) ?? []
+        return Set(stored)
+    }
+
+    private func mergeStoreKitEntitlements() async {
+        for await entitlement in Transaction.currentEntitlements {
+            if let transaction = try? checkVerified(entitlement) {
+                unlockedIDs.insert(transaction.productID)
+            }
+        }
+    }
+
     private func handle(_ verification: VerificationResult<Transaction>) async {
         guard let transaction = try? checkVerified(verification) else { return }
-        purchasedIDs.insert(transaction.productID)
+        unlockedIDs.insert(transaction.productID)
+        persist()
         await transaction.finish()
     }
 
@@ -146,7 +131,4 @@ final class CosmeticsStore: ObservableObject {
             return value
         }
     }
-
-    static let missingProductsMessage =
-        "No live prices yet. In Xcode: Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → Products.storekit. For TestFlight or the App Store, create matching non-consumable IAPs in App Store Connect."
 }
