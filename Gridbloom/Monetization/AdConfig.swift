@@ -1,40 +1,45 @@
 import Foundation
 
-/// Single place to switch Google test ads vs live AdMob inventory.
+/// AdMob inventory for Bloom revive and New tray.
 ///
-/// Default IDs are Google’s official **test** App ID and rewarded unit so Simulator
-/// and Debug builds work with no AdMob account.
-///
-/// **To go live (human + consoles):**
-/// 1. Create an iOS app and a Rewarded ad unit in https://apps.admob.com
-/// 2. Paste those IDs into `productionApplicationID` and `productionRewardedUnitID` below.
-/// 3. Set `GADApplicationIdentifier` in `Gridbloom/Info.plist` to the **same** production App ID.
-///    The Mobile Ads SDK reads the App ID from Info.plist at launch; unit IDs come from here.
+/// Live IDs are set below and used by default. `GADApplicationIdentifier` in
+/// `Gridbloom/Info.plist` **must** match `productionApplicationID` (the Mobile Ads
+/// SDK reads the App ID from Info.plist at launch). Unit IDs come from here.
 enum AdConfig {
-    /// Google sample App ID — `ca-app-pub-3940256099942544~1458002511`
+    /// Google sample App ID — only used if `forceGoogleTestAds` is on (DEBUG).
     static let testApplicationID = "ca-app-pub-3940256099942544~1458002511"
-    /// Google sample rewarded unit — `ca-app-pub-3940256099942544/1712485313`
+    /// Google sample rewarded unit — only used if `forceGoogleTestAds` is on (DEBUG).
     static let testRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
 
-    /// TODO: Paste your AdMob iOS App ID (`ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxx`).
-    /// Also replace `GADApplicationIdentifier` in `Info.plist` with this same value.
-    static let productionApplicationID = ""
+    static let productionApplicationID = "ca-app-pub-9109033018957997~7145749382"
+    /// Rewarded unit for Bloom revive and New tray. No interstitials.
+    static let productionRewardedUnitID = "ca-app-pub-9109033018957997/6223067453"
 
-    /// TODO: Paste your AdMob Rewarded ad unit ID (`ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx`).
-    /// Used for Bloom revive and New tray. No interstitials.
-    static let productionRewardedUnitID = ""
+    /// DEBUG-only escape hatch. Leave `false` for production inventory.
+    /// Set `true` if the AdMob account is still under review / no-fill and you
+    /// need Google’s sample rewarded unit in Simulator. Release builds ignore this.
+    /// The Info.plist App ID stays the production App ID (SDK requirement).
+    #if DEBUG
+    static let forceGoogleTestAds = false
+    #else
+    static var forceGoogleTestAds: Bool { false }
+    #endif
 
     static var applicationID: String {
-        resolved(productionApplicationID, test: testApplicationID)
+        if forceGoogleTestAds { return testApplicationID }
+        return resolved(productionApplicationID, test: testApplicationID)
     }
 
     static var rewardedAdUnitID: String {
-        resolved(productionRewardedUnitID, test: testRewardedUnitID)
+        if forceGoogleTestAds { return testRewardedUnitID }
+        return resolved(productionRewardedUnitID, test: testRewardedUnitID)
     }
 
-    /// True when we are still on Google’s sample inventory (safe for Simulator).
+    /// True when serving Google’s sample units (DEBUG hatch or unset production IDs).
     static var isUsingTestAds: Bool {
-        rewardedAdUnitID == testRewardedUnitID || applicationID == testApplicationID
+        forceGoogleTestAds
+            || rewardedAdUnitID == testRewardedUnitID
+            || applicationID == testApplicationID
     }
 
     static func resolved(_ production: String, test: String) -> String {
