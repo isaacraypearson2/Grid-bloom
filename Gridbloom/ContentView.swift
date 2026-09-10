@@ -3,6 +3,7 @@ import SwiftUI
 enum AppRoute: Equatable {
     case menu
     case play(GameMode)
+    case stages
     case settings
     case shop
     case album
@@ -40,6 +41,7 @@ struct ContentView: View {
                     goalProgress: profile.goalState,
                     onPlayClassic: { route = .play(.classic) },
                     onPlayDaily: { route = .play(.daily) },
+                    onPlayStages: { route = .stages },
                     onMiniGames: { route = .miniGames },
                     onAlbum: { route = .album },
                     onScanFlower: { route = .scanFlower },
@@ -50,6 +52,16 @@ struct ContentView: View {
             case .play(let mode):
                 GameView(mode: mode, onExit: { route = .menu })
                     .id(mode)
+            case .stages:
+                StagesView(
+                    profile: profile,
+                    theme: theme,
+                    classicBest: scoreStore.best(for: .classic, utcDay: nil),
+                    bestForStage: { scoreStore.best(for: .stage($0), utcDay: nil) },
+                    onPlayClassic: { route = .play(.classic) },
+                    onPlayStage: { route = .play(.stage($0.id)) },
+                    onClose: { route = .menu }
+                )
             case .settings:
                 SettingsView(settings: settings, theme: theme, onClose: { route = .menu })
             case .shop:

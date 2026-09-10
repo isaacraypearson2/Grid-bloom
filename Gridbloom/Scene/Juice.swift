@@ -275,7 +275,7 @@ enum FlowerGlyph {
     static func node(species: FlowerSpecies, size: CGFloat, fill: UIColor) -> SKNode {
         let root = SKNode()
         let petal = UIColor.white.withAlphaComponent(0.9)
-        let center = species.petalTint
+        let center = fill
         let ink = fill.darker(by: 0.22)
 
         switch species {
@@ -423,8 +423,8 @@ final class PieceSprite: SKNode {
                 }
                 node = shape
             } else {
-                let fill = piece.flower.rarity == .ultra
-                    ? piece.flower.petalTint
+                let fill = piece.bloom.rarity == .ultra
+                    ? piece.bloom.petalTint
                     : theme.pieceFill(index: piece.colorIndex)
                 node = Juice.flowerTile(
                     size: size,

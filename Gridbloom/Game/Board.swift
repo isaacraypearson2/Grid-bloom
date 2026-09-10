@@ -12,10 +12,11 @@ struct ClearResult: Equatable, Sendable {
     var isEmpty: Bool { lineCount == 0 }
 
     var bloomSpecies: FlowerSpecies {
-        if CustomBloom.isCustomStorage(dominantStorage) {
-            return .rose
-        }
-        return FlowerSpecies(rawValue: dominantStorage) ?? .tulip
+        bloomVariant?.species ?? .tulip
+    }
+
+    var bloomVariant: BloomVariant? {
+        BloomCatalog.variant(fromStorage: dominantStorage)
     }
 
     static let empty = ClearResult(rows: [], columns: [], clearedCells: [], dominantStorage: 0)

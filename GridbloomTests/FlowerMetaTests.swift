@@ -96,11 +96,13 @@ final class FlowerMetaTests: XCTestCase {
         XCTAssertTrue(tray.allSatisfy { dealer.flowerRoster.contains($0.flower) })
     }
 
-    func testBoardStoresFlowerRawValue() throws {
+    func testBoardStoresFlowerStorageID() throws {
         var board = Board()
         let piece = try XCTUnwrap(PieceCatalog.piece(catalogID: "O4")).spawned(flower: .rose)
         board.place(piece, at: GridPoint(x: 0, y: 0))
-        XCTAssertEqual(board[GridPoint(x: 0, y: 0)], FlowerSpecies.rose.rawValue)
+        XCTAssertEqual(board[GridPoint(x: 0, y: 0)], piece.storageValue)
+        XCTAssertEqual(BloomCatalog.variant(fromStorage: piece.storageValue)?.species, .rose)
+        XCTAssertFalse(CustomBloom.isCustomStorage(piece.storageValue))
     }
 
     func testDailyDealStampsOnlyStarterFlowers() {

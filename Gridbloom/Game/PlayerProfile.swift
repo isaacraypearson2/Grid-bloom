@@ -16,6 +16,7 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var lifetimePetals: Int
     @Published private(set) var extraFlowerIDs: Set<String>
     @Published private(set) var collectedFlowerIDs: Set<String>
+    @Published private(set) var collectedVariantIDs: Set<String>
     @Published private(set) var goalState: DailyGoalProgress
     @Published private(set) var lastClaimedGoalIDs: [String] = []
     @Published private(set) var lastPetalsAwarded: Int = 0
@@ -41,6 +42,7 @@ final class PlayerProfile: ObservableObject {
         static let lifetimePetals = "gridbloom.profile.lifetimePetals"
         static let extraFlowers = "gridbloom.profile.extraFlowers"
         static let collected = "gridbloom.profile.collectedFlowers"
+        static let collectedVariants = "gridbloom.profile.collectedVariants"
         static let goals = "gridbloom.profile.dailyGoals"
         static let blooms = "gridbloom.profile.customBlooms"
         static let plots = "gridbloom.profile.gardenPlots"
@@ -63,6 +65,7 @@ final class PlayerProfile: ObservableObject {
         lifetimePetals = defaults.integer(forKey: Keys.lifetimePetals)
         extraFlowerIDs = Set(defaults.stringArray(forKey: Keys.extraFlowers) ?? [])
         collectedFlowerIDs = Set(defaults.stringArray(forKey: Keys.collected) ?? [])
+        collectedVariantIDs = Set(defaults.stringArray(forKey: Keys.collectedVariants) ?? [])
         if let bloomData = defaults.data(forKey: Keys.blooms),
            let blooms = try? JSONDecoder().decode([CustomBloom].self, from: bloomData) {
             customBlooms = blooms
@@ -81,6 +84,8 @@ final class PlayerProfile: ObservableObject {
         } else {
             seedCounts = [:]
         }
+        migrateSeedKeys()
+        migrateCollectedVariants()
         if let packData = defaults.data(forKey: Keys.packs),
            let packs = try? JSONDecoder().decode([OwnedSeedPack].self, from: packData) {
             seedPacks = packs
@@ -149,6 +154,39 @@ final class PlayerProfile: ObservableObject {
             return Set(FlowerSpecies.starters)
         case .classic:
             return unlockedFlowers
+        case .stage(let id):
+            let allowed = Set(GardenStageCatalog.stage(id: id)?.species ?? [])
+            return unlockedFlowers.intersection(allowed).isEmpty
+                ? allowed
+                : unlockedFlowers.intersection(allowed)
+        }
+    }
+
+    func playableBlooms(for mode: GameMode) -> Set<BloomVariant> {
+        switch mode {
+        case .daily:
+            return Set(FlowerSpecies.starters.map(BloomCatalog.signature))
+        case .classic, .stage:
+            let speciesPool = playableFlowers(for: mode)
+            var blooms = Set<BloomVariant>()
+            for species in speciesPool {
+                blooms.insert(BloomCatalog.signature(species))
+            }
+            for key in collectedVariantIDs {
+                if let bloom = BloomVariant.parse(catalogKey: key), speciesPool.contains(bloom.species) {
+                    blooms.insert(bloom)
+                }
+            }
+            return blooms
+        }
+    }
+
+    func isStageUnlocked(_ stage: GardenStage) -> Bool {
+        switch stage.unlock {
+        case .always:
+            return true
+        case .collectSpecies(let species):
+            return collectedFlowers.contains(species)
         }
     }
 
@@ -158,12 +196,15 @@ final class PlayerProfile: ObservableObject {
         return .locked
     }
 
-    func recordGameStarted() {
-        gamesPlayed += 1
-        defaults.set(gamesPlayed, forKey: Keys.games)
+    func albumStatus(for bloom: BloomVariant) -> AlbumStatus {
+        if collectedVariantIDs.contains(bloom.catalogKey) { return .collected }
+        if bloom == BloomCatalog.signature(bloom.species), unlockedFlowers.contains(bloom.species) {
+            return .unlocked
+        }
+        return .locked
     }
 
-    func record(lines: Int, combo: Int, flowers: [FlowerSpecies] = [], score: Int = 0) {
+    func record(lines: Int, combo: Int, flowers: [FlowerSpecies] = [], blooms: [BloomVariant] = [], score: Int = 0) {
         if lines > 0 {
             linesCleared += lines
             defaults.set(linesCleared, forKey: Keys.lines)
@@ -176,7 +217,15 @@ final class PlayerProfile: ObservableObject {
         for flower in flowers {
             collect(flower)
         }
+        for bloom in blooms {
+            collect(bloom)
+        }
         noteGoals(lines: lines, combo: combo, score: score)
+    }
+
+    func recordGameStarted() {
+        gamesPlayed += 1
+        defaults.set(gamesPlayed, forKey: Keys.games)
     }
 
     func recordDailyPlay(utcDay: String) {
@@ -207,6 +256,7 @@ final class PlayerProfile: ObservableObject {
         }
         if collectImmediately {
             collect(species)
+            collect(BloomCatalog.signature(species))
         }
         return inserted
     }
@@ -216,6 +266,17 @@ final class PlayerProfile: ObservableObject {
         let id = String(species.rawValue)
         guard collectedFlowerIDs.insert(id).inserted else { return }
         defaults.set(Array(collectedFlowerIDs).sorted(), forKey: Keys.collected)
+        collect(BloomCatalog.signature(species))
+    }
+
+    func collect(_ bloom: BloomVariant) {
+        unlockFlower(bloom.species, collectImmediately: false)
+        let speciesID = String(bloom.species.rawValue)
+        if collectedFlowerIDs.insert(speciesID).inserted {
+            defaults.set(Array(collectedFlowerIDs).sorted(), forKey: Keys.collected)
+        }
+        guard collectedVariantIDs.insert(bloom.catalogKey).inserted else { return }
+        defaults.set(Array(collectedVariantIDs).sorted(), forKey: Keys.collectedVariants)
     }
 
     func addPetals(_ amount: Int) {
@@ -305,13 +366,17 @@ final class PlayerProfile: ObservableObject {
     }
 
     func seedCount(for species: FlowerSpecies) -> Int {
-        max(0, seedCounts[String(species.rawValue)] ?? 0)
+        BloomCatalog.variants(for: species).reduce(0) { $0 + seedCount(for: $1) }
     }
 
-    var inventorySeeds: [(FlowerSpecies, Int)] {
-        FlowerSpecies.allCases.compactMap { species in
-            let count = seedCount(for: species)
-            return count > 0 ? (species, count) : nil
+    func seedCount(for bloom: BloomVariant) -> Int {
+        max(0, seedCounts[bloom.catalogKey] ?? 0)
+    }
+
+    var inventorySeeds: [(BloomVariant, Int)] {
+        BloomCatalog.allVariants.compactMap { bloom in
+            let count = seedCount(for: bloom)
+            return count > 0 ? (bloom, count) : nil
         }
     }
 
@@ -321,9 +386,12 @@ final class PlayerProfile: ObservableObject {
     }
 
     func addSeed(_ species: FlowerSpecies, count: Int = 1) {
+        addSeed(BloomCatalog.signature(species), count: count)
+    }
+
+    func addSeed(_ bloom: BloomVariant, count: Int = 1) {
         guard count > 0 else { return }
-        let key = String(species.rawValue)
-        seedCounts[key] = seedCount(for: species) + count
+        seedCounts[bloom.catalogKey] = seedCount(for: bloom) + count
         persistSeeds()
     }
 
@@ -358,8 +426,8 @@ final class PlayerProfile: ObservableObject {
         persistPacks()
         var rng = SplitMix64(seed: DailySeed.fnv1a64(id.uuidString))
         let seeds = SeedGardenRules.roll(rarity: pack.rarity, rng: &rng)
-        for species in seeds {
-            addSeed(species)
+        for bloom in seeds {
+            addSeed(bloom)
         }
         let reveal = PackReveal(rarity: pack.rarity, seeds: seeds)
         lastPackReveal = reveal
@@ -372,13 +440,20 @@ final class PlayerProfile: ObservableObject {
 
     @discardableResult
     func plantSeed(_ species: FlowerSpecies, slot: Int, now: Date = Date()) -> GardenPlot? {
+        plantSeed(BloomCatalog.signature(species), slot: slot, now: now)
+    }
+
+    @discardableResult
+    func plantSeed(_ bloom: BloomVariant, slot: Int, now: Date = Date()) -> GardenPlot? {
         guard emptyGardenSlots.contains(slot) else { return nil }
-        guard consumeSeed(species) else { return nil }
-        let duration = species.rarity.growDuration
+        guard consumeSeed(bloom) else { return nil }
+        let duration = bloom.rarity.growDuration
         let plot = GardenPlot(
             id: UUID(),
             slot: slot,
-            speciesRaw: species.rawValue,
+            speciesRaw: bloom.species.rawValue,
+            colorRaw: bloom.color.rawValue,
+            rarityRaw: bloom.rarity.rawValue,
             plantedAt: now,
             lastWateredAt: now,
             lastTickAt: now,
@@ -437,11 +512,10 @@ final class PlayerProfile: ObservableObject {
         guard plot.isReady(now: now) else { return nil }
         gardenPlots.remove(at: index)
         persistPlots()
-        let species = plot.species
-        unlockFlower(species)
-        lastHarvested = species
+        collect(plot.bloom)
+        lastHarvested = plot.species
         addPetals(SeedGardenRules.harvestPetals)
-        return species
+        return plot.species
     }
 
     /// Apply elapsed growth, wilt, and deaths. Dead plots empty; low-chance wilted seed salvage.
@@ -453,7 +527,7 @@ final class PlayerProfile: ObservableObject {
             if plot.isDead(now: now) {
                 let salvaged = SeedGardenRules.salvagesSeed(plotID: plot.id)
                 if salvaged {
-                    addSeed(plot.species)
+                    addSeed(plot.bloom)
                 }
                 event = .died(species: plot.species, salvaged: salvaged)
                 continue
@@ -474,16 +548,39 @@ final class PlayerProfile: ObservableObject {
     }
 
     private func consumeSeed(_ species: FlowerSpecies) -> Bool {
-        let key = String(species.rawValue)
-        let count = seedCount(for: species)
+        consumeSeed(BloomCatalog.signature(species))
+    }
+
+    private func consumeSeed(_ bloom: BloomVariant) -> Bool {
+        let count = seedCount(for: bloom)
         guard count > 0 else { return false }
         if count == 1 {
-            seedCounts.removeValue(forKey: key)
+            seedCounts.removeValue(forKey: bloom.catalogKey)
         } else {
-            seedCounts[key] = count - 1
+            seedCounts[bloom.catalogKey] = count - 1
         }
         persistSeeds()
         return true
+    }
+
+    private func migrateSeedKeys() {
+        var changed = false
+        for (key, count) in seedCounts where !key.contains(".") {
+            guard count > 0, let raw = Int(key), let species = FlowerSpecies(rawValue: raw) else { continue }
+            let next = BloomCatalog.signature(species).catalogKey
+            seedCounts[next] = (seedCounts[next] ?? 0) + count
+            seedCounts.removeValue(forKey: key)
+            changed = true
+        }
+        if changed { persistSeeds() }
+    }
+
+    private func migrateCollectedVariants() {
+        guard collectedVariantIDs.isEmpty, !collectedFlowerIDs.isEmpty else { return }
+        for species in collectedFlowers {
+            collectedVariantIDs.insert(BloomCatalog.signature(species).catalogKey)
+        }
+        defaults.set(Array(collectedVariantIDs).sorted(), forKey: Keys.collectedVariants)
     }
 
     private func persistPlots() {

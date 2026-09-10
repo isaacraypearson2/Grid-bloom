@@ -416,8 +416,9 @@ final class GameScene: SKScene {
 
         for point in result.clear.clearedCells {
             let species = result.clear.bloomSpecies
+            let variant = result.clear.bloomVariant
             let custom = profile?.customBloom(storage: result.clear.dominantStorage)
-            let tint = custom?.fillColor ?? species.petalTint
+            let tint = custom?.fillColor ?? variant?.petalTint ?? species.petalTint
             let flash = tileNode(
                 storage: result.clear.dominantStorage == 0 ? species.rawValue : result.clear.dominantStorage,
                 size: cellSize * 0.92
@@ -449,20 +450,22 @@ final class GameScene: SKScene {
         }
 
         let bloomSpecies = result.clear.bloomSpecies
+        let bloomVariant = result.clear.bloomVariant
         let customBloom = profile?.customBloom(storage: result.clear.dominantStorage)
+        let overlayTint = customBloom?.fillColor ?? bloomVariant?.petalTint ?? bloomSpecies.petalTint
         BloomOverlay.play(
             in: self,
             species: customBloom?.guessedSpecies ?? bloomSpecies,
             title: result.didUltraWipe
-                ? "\(customBloom?.name ?? bloomSpecies.title)  GRID"
-                : (customBloom?.name ?? bloomSpecies.title),
-            tint: customBloom?.fillColor ?? bloomSpecies.petalTint,
+                ? "\(customBloom?.name ?? bloomVariant?.title ?? bloomSpecies.title)  GRID"
+                : (customBloom?.name ?? bloomVariant?.title ?? bloomSpecies.title),
+            tint: overlayTint,
             stamp: customBloom.flatMap { CustomBloomDisk.stamp(id: $0.id) },
             combo: result.didUltraWipe ? max(4, result.combo) : max(1, result.combo),
             reduced: reducedMotion
         )
 
-        Juice.flashRing(at: mid, color: customBloom?.fillColor ?? bloomSpecies.petalTint, in: juiceRoot, reduced: reducedMotion)
+        Juice.flashRing(at: mid, color: overlayTint, in: juiceRoot, reduced: reducedMotion)
         Juice.screenShake(on: boardRoot, combo: result.combo, reduced: reducedMotion)
         Juice.screenPunch(on: boardRoot, combo: result.combo, reduced: reducedMotion)
         Juice.floatingLabel(
@@ -485,15 +488,15 @@ final class GameScene: SKScene {
         if result.didUltraWipe {
             Juice.comboBanner(
                 combo: max(5, result.combo),
-                color: bloomSpecies.petalTint,
+                color: overlayTint,
                 in: juiceRoot,
                 at: CGPoint(x: boardRect.midX, y: boardRect.midY + 36),
                 reduced: reducedMotion
             )
             Juice.floatingLabel(
-                bloomSpecies.ability?.title ?? "Grid bloom",
+                bloomSpecies.ability?.title ?? bloomVariant?.ability?.title ?? "Grid bloom",
                 at: CGPoint(x: mid.x, y: mid.y - 22),
-                color: bloomSpecies.petalTint,
+                color: overlayTint,
                 in: juiceRoot,
                 fontSize: 16,
                 reduced: reducedMotion
@@ -546,8 +549,11 @@ final class GameScene: SKScene {
                 stamp: CustomBloomDisk.stamp(id: custom.id)
             )
         }
-        let species = FlowerSpecies(rawValue: storage) ?? FlowerSpecies.from(colorIndex: max(0, storage - 1))
-        let fill = species.rarity == .ultra ? species.petalTint : theme.pieceFill(index: species.rawValue - 1)
+        let variant = BloomCatalog.variant(fromStorage: storage)
+        let species = variant?.species ?? FlowerSpecies.from(colorIndex: max(0, storage - 1))
+        let fill = variant?.rarity == .ultra
+            ? (variant?.petalTint ?? species.petalTint)
+            : (variant?.petalTint ?? theme.pieceFill(index: species.rawValue - 1))
         return Juice.flowerTile(
             size: size,
             fill: fill,

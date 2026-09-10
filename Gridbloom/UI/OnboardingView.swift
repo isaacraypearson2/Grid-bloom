@@ -11,7 +11,8 @@ struct OnboardingView: View {
         ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… That flower blooms across the screen."),
         ("camera.fill", "Scan a real flower", "Snap or pick a photo. We read it on this iPhone and plant it as a playable tile."),
         ("leaf.circle.fill", "Grow a real-time garden", "Water your plants so they don’t wilt. Watch an ad for fertilizer — 2× growth for 2 hours, once a day per plant. Classic Garden stays free."),
-        ("book.fill", "Collect flowers & maps", "Album, daily goals, and side gardens unlock new species and playfield skins. Classic Garden is always free to play.")
+        ("map.fill", "Flower maps", "Unlock Tulip Walk, Rose Garden, Succulent Dunes, and more by collecting that flower. Classic Garden stays the mixed meadow."),
+        ("book.fill", "Collect colors & rarities", "Each species has color variants and a Common → Rare → Epic → Ultra ladder. Ultra still wipes the board. Classic Garden is always free to play.")
     ]
 
     var body: some View {

@@ -230,7 +230,7 @@ final class GardenLoopTests: XCTestCase {
         var sawUltra = false
         for _ in 0..<40 {
             let tray = dealer.dealTray(on: Board())
-            if tray.contains(where: { $0.flower.rarity == .ultra }) {
+            if tray.contains(where: { $0.bloom.rarity == .ultra }) {
                 sawUltra = true
                 break
             }

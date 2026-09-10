@@ -14,6 +14,7 @@ struct MainMenuView: View {
     var goalProgress: DailyGoalProgress
     var onPlayClassic: () -> Void
     var onPlayDaily: () -> Void
+    var onPlayStages: () -> Void
     var onMiniGames: () -> Void
     var onAlbum: () -> Void
     var onScanFlower: () -> Void
@@ -68,6 +69,11 @@ struct MainMenuView: View {
                         )
                     }
                     .buttonStyle(GardenButtonStyle(fill: GardenPalette.dailyFill))
+
+                    Button(action: onPlayStages) {
+                        menuLabel(title: "Flower maps", subtitle: "Tulip, rose, succulent… unlockable stages", systemImage: "map.fill")
+                    }
+                    .buttonStyle(GardenButtonStyle(fill: Color(red: 0.72, green: 0.52, blue: 0.62)))
 
                     Button(action: onGarden) {
                         menuLabel(title: "My garden", subtitle: "Grow seeds · harvest tiles", systemImage: "leaf.circle.fill")

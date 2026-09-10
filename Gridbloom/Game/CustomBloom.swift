@@ -27,7 +27,7 @@ struct CustomBloom: Codable, Equatable, Identifiable, Sendable {
     }
 
     static func isCustomStorage(_ value: Int) -> Bool {
-        value >= storageBase
+        value >= storageBase && value < BloomCatalog.customStorageEnd
     }
 }
 

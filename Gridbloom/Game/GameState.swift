@@ -1,9 +1,10 @@
 import Foundation
 import Combine
 
-enum GameMode: String, Equatable, Sendable {
+enum GameMode: Equatable, Hashable, Sendable {
     case classic
     case daily
+    case stage(String)
 }
 
 struct PlaceResult: Equatable {
@@ -68,13 +69,14 @@ final class GameState: ObservableObject {
             switch mode {
             case .daily:
                 seed = DailySeed.seed(fromUTCDay: day ?? DailySeed.utcDayString(from: now))
-            case .classic:
+            case .classic, .stage:
                 seed = DailySeed.classicLaunchSeed(from: now)
             }
             self.dealer = FairDealer(rng: SplitMix64(seed: seed))
         }
-        self.dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Set(FlowerSpecies.starters)
-        self.dealer.customBlooms = mode == .classic ? (profile?.customBlooms ?? []) : []
+        self.dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Self.fallbackFlowers(for: mode)
+        self.dealer.bloomRoster = profile?.playableBlooms(for: mode) ?? Self.fallbackBlooms(for: mode)
+        self.dealer.customBlooms = mode.allowsCustomBlooms ? (profile?.customBlooms ?? []) : []
         self.bestScore = self.scoreStore.best(for: mode, utcDay: day)
         if dealOnStart, tray == nil {
             dealTray()
@@ -86,20 +88,38 @@ final class GameState: ObservableObject {
 
     func attachProfile(_ profile: PlayerProfile) {
         self.profile = profile
-        dealer.flowerRoster = profile.playableFlowers(for: mode)
-        dealer.customBlooms = mode == .classic ? profile.customBlooms : []
+        applyRoster()
         restampOpeningTrayIfNeeded()
     }
 
+    private func applyRoster() {
+        dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Self.fallbackFlowers(for: mode)
+        dealer.bloomRoster = profile?.playableBlooms(for: mode) ?? Self.fallbackBlooms(for: mode)
+        dealer.customBlooms = mode.allowsCustomBlooms ? (profile?.customBlooms ?? []) : []
+    }
+
+    private static func fallbackFlowers(for mode: GameMode) -> Set<FlowerSpecies> {
+        switch mode {
+        case .classic, .daily:
+            return Set(FlowerSpecies.starters)
+        case .stage(let id):
+            return Set(GardenStageCatalog.stage(id: id)?.species ?? FlowerSpecies.starters)
+        }
+    }
+
+    private static func fallbackBlooms(for mode: GameMode) -> Set<BloomVariant> {
+        Set(fallbackFlowers(for: mode).map(BloomCatalog.signature))
+    }
+
     /// Classic deals the first tray in `init` before SwiftUI can attach the profile.
-    /// Overlay scanned stamps in place (no extra RNG) so they can show immediately.
+    /// Overlay scanned stamps and unlocked variants in place (no extra RNG).
     func restampOpeningTrayIfNeeded() {
-        guard mode == .classic, board.occupiedCount == 0, score == 0, !dealer.customBlooms.isEmpty else { return }
+        guard board.occupiedCount == 0, score == 0 else { return }
         let next = tray.map { piece in
-            piece.map { dealer.overlayCustom(dealer.overlayUltra($0)) }
+            piece.map { dealer.restampBloom($0) }
         }
         let changed = zip(tray, next).contains { lhs, rhs in
-            lhs?.customBloomID != rhs?.customBloomID || lhs?.flower != rhs?.flower
+            lhs?.customBloomID != rhs?.customBloomID || lhs?.bloom != rhs?.bloom
         }
         guard changed else { return }
         tray = next
@@ -145,9 +165,7 @@ final class GameState: ObservableObject {
 
         var clear = board.clearCompletedLines()
         var didUltraWipe = false
-        if mode == .classic,
-           let species = FlowerSpecies(rawValue: clear.dominantStorage),
-           species.ability == .gridWipe {
+        if mode.allowsUltraWipe, clear.bloomVariant?.ability == .gridWipe {
             let extra = board.occupiedPoints()
             if !extra.isEmpty {
                 board.clearCells(extra)
@@ -175,9 +193,9 @@ final class GameState: ObservableObject {
         }
         if !clear.isEmpty {
             linesClearedThisRun += clear.lineCount
-            profile?.record(lines: clear.lineCount, combo: combo, flowers: [piece.flower], score: score)
+            profile?.record(lines: clear.lineCount, combo: combo, blooms: [piece.bloom], score: score)
         } else {
-            profile?.record(lines: 0, combo: combo, flowers: [piece.flower], score: score)
+            profile?.record(lines: 0, combo: combo, blooms: [piece.bloom], score: score)
         }
 
         var refilled = false
@@ -219,8 +237,7 @@ final class GameState: ObservableObject {
         } else {
             dealer = FairDealer(rng: SplitMix64(seed: DailySeed.classicLaunchSeed()))
         }
-        dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Set(FlowerSpecies.starters)
-        dealer.customBlooms = mode == .classic ? (profile?.customBlooms ?? []) : []
+        applyRoster()
         bestScore = scoreStore.best(for: mode, utcDay: utcDay)
         dealTray()
         refreshGameOver()

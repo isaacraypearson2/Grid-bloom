@@ -11,6 +11,8 @@ struct FairDealer {
     var openingGraceTrays = 5
     /// Flowers the dealer may stamp onto pieces. Daily Bloom should pass starters only.
     var flowerRoster: Set<FlowerSpecies> = Set(FlowerSpecies.starters)
+    /// Unlocked color×rarity variants. Daily should pass signature commons only.
+    var bloomRoster: Set<BloomVariant> = Set(FlowerSpecies.starters.map(BloomCatalog.signature))
     /// Classic-only scanned blooms. Empty for Today’s Bloom so UTC deals stay stable.
     var customBlooms: [CustomBloom] = []
 
@@ -61,7 +63,7 @@ struct FairDealer {
                 catalogID: "empty",
                 cells: [GridPoint(x: 0, y: 0)],
                 colorIndex: 0,
-                flower: .tulip,
+                bloom: BloomCatalog.signature(.tulip),
                 customBloomID: nil,
                 customStorageSlot: nil
             )
@@ -106,15 +108,21 @@ struct FairDealer {
 
     private func stamp(_ piece: Piece) -> Piece {
         let flower = FlowerSpecies.playable(at: piece.colorIndex, unlocked: flowerRoster)
-        return overlayCustom(overlayUltra(piece.spawned(flower: flower)))
+        let ofSpecies = bloomRoster.filter { $0.species == flower }.sorted()
+        let bloom = ofSpecies.isEmpty
+            ? BloomCatalog.signature(flower)
+            : ofSpecies[abs(piece.colorIndex) % ofSpecies.count]
+        return overlayCustom(overlayUltra(piece.spawned(bloom: bloom)))
     }
 
     /// Classic-only ultras, derived from colorIndex — no extra RNG.
     func overlayUltra(_ piece: Piece) -> Piece {
-        guard piece.customBloomID == nil, piece.flower.rarity != .ultra else { return piece }
-        let ultras = flowerRoster.filter { $0.rarity == .ultra }.sorted { $0.rawValue < $1.rawValue }
+        guard piece.customBloomID == nil, piece.bloom.rarity != .ultra else { return piece }
+        let ultras = bloomRoster.filter { $0.rarity == .ultra }.sorted()
         guard !ultras.isEmpty, piece.colorIndex % 4 == 1 else { return piece }
-        return piece.spawned(flower: ultras[abs(piece.colorIndex) % ultras.count])
+        let same = ultras.filter { $0.species == piece.flower }
+        let pool = same.isEmpty ? ultras : same
+        return piece.spawned(bloom: pool[abs(piece.colorIndex) % pool.count])
     }
 
     /// Applies a scanned stamp from `colorIndex` with no extra RNG.
@@ -124,11 +132,17 @@ struct FairDealer {
             return piece
         }
         let bloom = customBlooms[abs(piece.colorIndex) % customBlooms.count]
+        let species = bloom.guessedSpecies ?? piece.flower
         return piece.spawned(
-            flower: bloom.guessedSpecies ?? piece.flower,
+            bloom: BloomCatalog.signature(species),
+            flower: species,
             customBloomID: bloom.id,
             customStorageSlot: bloom.slot
         )
+    }
+
+    func restampBloom(_ piece: Piece) -> Piece {
+        stamp(piece)
     }
 
     private mutating func weightedIndex(weights: [Double]) -> Int {

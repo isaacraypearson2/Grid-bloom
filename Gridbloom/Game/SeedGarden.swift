@@ -11,7 +11,7 @@ enum SeedRarity: String, Codable, CaseIterable, Identifiable, Comparable, Sendab
 
     var id: String { rawValue }
 
-    private var rank: Int {
+    var ladderIndex: Int {
         switch self {
         case .common: return 0
         case .rare: return 1
@@ -21,7 +21,16 @@ enum SeedRarity: String, Codable, CaseIterable, Identifiable, Comparable, Sendab
     }
 
     static func < (lhs: SeedRarity, rhs: SeedRarity) -> Bool {
-        lhs.rank < rhs.rank
+        lhs.ladderIndex < rhs.ladderIndex
+    }
+
+    static func from(ladderIndex: Int) -> SeedRarity {
+        switch max(0, min(3, ladderIndex)) {
+        case 1: return .rare
+        case 2: return .epic
+        case 3: return .ultra
+        default: return .common
+        }
     }
 
     var title: String {
@@ -102,6 +111,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var slot: Int
     var speciesRaw: Int
+    var colorRaw: Int
+    var rarityRaw: String
     var plantedAt: Date
     var lastWateredAt: Date
     var lastTickAt: Date
@@ -116,7 +127,15 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         FlowerSpecies(rawValue: speciesRaw) ?? .tulip
     }
 
-    var rarity: SeedRarity { species.rarity }
+    var bloom: BloomVariant {
+        BloomVariant(
+            species: species,
+            color: BloomColor(rawValue: colorRaw) ?? species.profile.signatureColor,
+            rarity: SeedRarity(rawValue: rarityRaw) ?? species.rarity
+        )
+    }
+
+    var rarity: SeedRarity { bloom.rarity }
 
     func thirstyAt() -> Date {
         lastWateredAt.addingTimeInterval(SeedGardenRules.waterEvery(for: rarity))
@@ -231,7 +250,7 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, slot, speciesRaw, plantedAt, lastWateredAt, lastTickAt
+        case id, slot, speciesRaw, colorRaw, rarityRaw, plantedAt, lastWateredAt, lastTickAt
         case baseDuration, workRemaining, fertilizerUntil, fertilizerAvailableAt
         case finishesAt, boosted
     }
@@ -240,6 +259,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         id: UUID,
         slot: Int,
         speciesRaw: Int,
+        colorRaw: Int,
+        rarityRaw: String,
         plantedAt: Date,
         lastWateredAt: Date,
         lastTickAt: Date,
@@ -251,6 +272,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         self.id = id
         self.slot = slot
         self.speciesRaw = speciesRaw
+        self.colorRaw = colorRaw
+        self.rarityRaw = rarityRaw
         self.plantedAt = plantedAt
         self.lastWateredAt = lastWateredAt
         self.lastTickAt = lastTickAt
@@ -265,13 +288,20 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         id = try c.decode(UUID.self, forKey: .id)
         slot = try c.decode(Int.self, forKey: .slot)
         speciesRaw = try c.decode(Int.self, forKey: .speciesRaw)
+        let species = FlowerSpecies(rawValue: speciesRaw) ?? .tulip
+        let signature = BloomCatalog.signature(species)
+        colorRaw = try c.decodeIfPresent(Int.self, forKey: .colorRaw) ?? signature.color.rawValue
+        rarityRaw = try c.decodeIfPresent(String.self, forKey: .rarityRaw) ?? signature.rarity.rawValue
         plantedAt = try c.decode(Date.self, forKey: .plantedAt)
         let decodedNow = Date()
         // Legacy plots had no care clock. Reset watering at load so they don't instantly wilt.
         lastWateredAt = try c.decodeIfPresent(Date.self, forKey: .lastWateredAt) ?? decodedNow
         lastTickAt = try c.decodeIfPresent(Date.self, forKey: .lastTickAt) ?? decodedNow
-        let species = FlowerSpecies(rawValue: speciesRaw) ?? .tulip
-        let fallbackDuration = species.rarity.growDuration
+        let fallbackDuration = BloomVariant(
+            species: species,
+            color: BloomColor(rawValue: colorRaw) ?? signature.color,
+            rarity: SeedRarity(rawValue: rarityRaw) ?? signature.rarity
+        ).rarity.growDuration
         baseDuration = try c.decodeIfPresent(TimeInterval.self, forKey: .baseDuration) ?? fallbackDuration
         if let remaining = try c.decodeIfPresent(TimeInterval.self, forKey: .workRemaining) {
             workRemaining = remaining
@@ -292,6 +322,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         try c.encode(id, forKey: .id)
         try c.encode(slot, forKey: .slot)
         try c.encode(speciesRaw, forKey: .speciesRaw)
+        try c.encode(colorRaw, forKey: .colorRaw)
+        try c.encode(rarityRaw, forKey: .rarityRaw)
         try c.encode(plantedAt, forKey: .plantedAt)
         try c.encode(lastWateredAt, forKey: .lastWateredAt)
         try c.encode(lastTickAt, forKey: .lastTickAt)
@@ -312,7 +344,7 @@ enum GardenCareStage: String, Equatable, Sendable {
 
 struct PackReveal: Equatable {
     var rarity: SeedRarity
-    var seeds: [FlowerSpecies]
+    var seeds: [BloomVariant]
 }
 
 enum GardenEvent: Equatable {
@@ -351,9 +383,9 @@ enum SeedGardenRules {
         FlowerSpecies.allCases.filter { $0.rarity == rarity }
     }
 
-    /// Fair gacha: a pack of rarity X only rolls seeds of that tier.
-    static func roll(rarity: SeedRarity, rng: inout SplitMix64) -> [FlowerSpecies] {
-        let pool = Self.pool(for: rarity)
+    /// Fair gacha: a pack of rarity X only rolls variants of that tier (species × color).
+    static func roll(rarity: SeedRarity, rng: inout SplitMix64) -> [BloomVariant] {
+        let pool = BloomCatalog.variants(rarity: rarity)
         guard !pool.isEmpty else { return [] }
         return (0..<rarity.seedCount).map { _ in
             pool[rng.int(in: 0..<pool.count)]

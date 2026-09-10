@@ -17,7 +17,7 @@ struct AlbumView: View {
                         Text("Flower album")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("\(profile.collectedFlowers.count)/\(FlowerSpecies.allCases.count) collected  ·  \(profile.customBlooms.count) scanned  ·  \(profile.gardenRank.title)")
+                        Text("\(profile.collectedVariantIDs.count)/\(BloomCatalog.allVariants.count) variants  ·  \(profile.collectedFlowers.count) species  ·  \(profile.customBlooms.count) scanned  ·  \(profile.gardenRank.title)")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -68,12 +68,12 @@ struct AlbumView: View {
                 }
 
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 12) {
                         ForEach(profile.customBlooms) { bloom in
                             customCard(bloom)
                         }
                         ForEach(FlowerSpecies.allCases) { species in
-                            flowerCard(species)
+                            speciesCard(species)
                         }
                     }
                     .padding(.bottom, 16)
@@ -86,27 +86,31 @@ struct AlbumView: View {
         }
     }
 
-    private func flowerCard(_ species: FlowerSpecies) -> some View {
+    private func speciesCard(_ species: FlowerSpecies) -> some View {
         let status = profile.albumStatus(for: species)
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 BloomMark(size: 36, petal: status == .locked ? theme.inkSoft.opacity(0.35) : species.swiftTint)
                     .opacity(status == .locked ? 0.45 : 1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(status == .locked ? "???" : species.title)
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundColor(theme.ink)
+                    Text(status == .locked ? species.unlockHint : species.blurb)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundColor(theme.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Spacer()
                 Text(statusLabel(status))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(theme.inkSoft)
             }
-            Text(species.rarity.title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundColor(species.rarity.ink)
-            Text(status == .locked ? "???" : species.title)
-                .font(.system(.headline, design: .rounded).weight(.bold))
-                .foregroundColor(theme.ink)
-            Text(status == .locked ? species.unlockHint : species.blurb)
-                .font(.system(.caption, design: .rounded))
-                .foregroundColor(theme.inkSoft)
-                .fixedSize(horizontal: false, vertical: true)
+            if status != .locked {
+                ForEach(species.colors, id: \.self) { color in
+                    colorRow(species: species, color: color)
+                }
+            }
         }
         .padding(14)
         .background(theme.cream.opacity(status == .collected ? 0.95 : 0.7))
@@ -115,6 +119,32 @@ struct AlbumView: View {
                 .stroke(status == .collected ? theme.accent.opacity(0.5) : Color.clear, lineWidth: 1.4)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func colorRow(species: FlowerSpecies, color: BloomColor) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color(species.profile.tint(for: color)))
+                .frame(width: 14, height: 14)
+            Text(color.title)
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundColor(theme.ink)
+                .frame(width: 72, alignment: .leading)
+            ForEach(SeedRarity.allCases) { rarity in
+                let bloom = BloomVariant(species: species, color: color, rarity: rarity)
+                let status = profile.albumStatus(for: bloom)
+                Text(rarity.title.prefix(1))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(status == .collected ? .white : rarity.ink.opacity(status == .unlocked ? 0.9 : 0.35))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(
+                        (status == .collected ? rarity.fill : rarity.fill.opacity(status == .unlocked ? 0.28 : 0.12))
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .accessibilityLabel("\(rarity.title) \(color.title) \(species.title), \(statusLabel(status))")
+            }
+        }
     }
 
     private func customCard(_ bloom: CustomBloom) -> some View {

@@ -196,9 +196,9 @@ struct GardenView: View {
         let plot = resolvedPlot(slot: slot, now: now)
         return VStack(spacing: 6) {
             if let plot {
-                BloomMark(size: 26, petal: plot.careStage(now: now) == .wilted ? theme.inkSoft : plot.species.swiftTint)
+                BloomMark(size: 26, petal: plot.careStage(now: now) == .wilted ? theme.inkSoft : plot.bloom.swiftTint)
                     .opacity(plot.careStage(now: now) == .wilted ? 0.55 : 1)
-                Text(plot.species.title)
+                Text(plot.bloom.title)
                     .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundColor(theme.ink)
                     .lineLimit(1)
@@ -214,9 +214,9 @@ struct GardenView: View {
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
                         .foregroundColor(Color(red: 0.46, green: 0.62, blue: 0.28))
                 } else {
-                    Text(plot.species.rarity.title)
+                    Text(plot.bloom.rarity.title)
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundColor(plot.species.rarity.ink)
+                        .foregroundColor(plot.bloom.rarity.ink)
                 }
                 if plot.isReady(now: now) {
                     Button("Harvest") {
@@ -240,7 +240,7 @@ struct GardenView: View {
                         .foregroundColor(theme.inkSoft)
                 } else {
                     ProgressView(value: plot.progress(now: now))
-                        .tint(plot.species.rarity.fill)
+                        .tint(plot.bloom.rarity.fill)
                     Text(SeedGardenRules.formatRemaining(plot.remaining(now: now)))
                         .font(.system(size: 11, design: .rounded).monospacedDigit())
                         .foregroundColor(theme.inkSoft)
@@ -341,22 +341,22 @@ struct GardenView: View {
                     Text("Open a seed pack or win a side garden first.")
                         .foregroundColor(theme.inkSoft)
                 }
-                ForEach(profile.inventorySeeds, id: \.0) { species, count in
+                ForEach(profile.inventorySeeds, id: \.0.catalogKey) { bloom, count in
                     Button {
-                        if profile.plantSeed(species, slot: slot) != nil {
+                        if profile.plantSeed(bloom, slot: slot) != nil {
                             plantSlot = nil
                             Haptics.success()
                         }
                     } label: {
                         HStack {
-                            BloomMark(size: 28, petal: species.swiftTint)
+                            BloomMark(size: 28, petal: bloom.swiftTint)
                             VStack(alignment: .leading) {
-                                Text(species.title)
+                                Text(bloom.title)
                                     .font(.system(.headline, design: .rounded).weight(.bold))
                                     .foregroundColor(theme.ink)
-                                Text("\(species.rarity.title)  ·  \(SeedGardenRules.formatRemaining(species.rarity.growDuration))  ·  water often")
+                                Text("\(bloom.rarity.title)  ·  \(SeedGardenRules.formatRemaining(bloom.rarity.growDuration))  ·  water often")
                                     .font(.system(.caption, design: .rounded))
-                                    .foregroundColor(species.rarity.ink)
+                                    .foregroundColor(bloom.rarity.ink)
                             }
                             Spacer()
                             Text("×\(count)")
@@ -385,16 +385,16 @@ struct GardenView: View {
                 Text(reveal.rarity.title.uppercased())
                     .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundColor(reveal.rarity.fill)
-                ForEach(Array(reveal.seeds.enumerated()), id: \.offset) { _, species in
+                ForEach(Array(reveal.seeds.enumerated()), id: \.offset) { _, bloom in
                     HStack {
-                        BloomMark(size: 28, petal: species.swiftTint)
-                        Text(species.title)
+                        BloomMark(size: 28, petal: bloom.swiftTint)
+                        Text(bloom.title)
                             .font(.system(.headline, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
                         Spacer()
-                        Text(species.rarity.title)
+                        Text(bloom.rarity.title)
                             .font(.system(.caption, design: .rounded).weight(.semibold))
-                            .foregroundColor(species.rarity.ink)
+                            .foregroundColor(bloom.rarity.ink)
                     }
                     .padding(10)
                     .background(theme.cream.opacity(0.95))

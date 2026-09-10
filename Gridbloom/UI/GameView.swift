@@ -51,7 +51,7 @@ struct GameView: View {
     }
 
     var body: some View {
-        let theme = cosmetics.resolvedTheme
+        let theme = playTheme
         let reduce = settings.prefersReducedMotion || systemReduceMotion
         return ZStack {
             GardenBackground(theme: theme)
@@ -142,16 +142,17 @@ struct GameView: View {
             game.attachProfile(profile)
             scene.settings = settings
             scene.syncProfile(profile)
-            scene.apply(theme: theme, colorblind: settings.colorblindPalette)
+            scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
             DispatchQueue.main.async {
                 game.recordSessionStartIfNeeded()
             }
         }
         .onChange(of: cosmetics.selectedPack) { _ in
-            scene.apply(theme: cosmetics.resolvedTheme, colorblind: settings.colorblindPalette)
+            guard game.mode.usesPlayerMapSkin else { return }
+            scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
         }
         .onChange(of: settings.colorblindPalette) { _ in
-            scene.apply(theme: cosmetics.resolvedTheme, colorblind: settings.colorblindPalette)
+            scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
         }
         .onChange(of: game.bloomPulse) { _ in
             bannerCombo = game.lastBloomCombo
@@ -168,10 +169,18 @@ struct GameView: View {
         }
     }
 
+    private var playTheme: BoardTheme {
+        if !game.mode.usesPlayerMapSkin, let pack = game.mode.stage?.themePack {
+            return BoardTheme.theme(for: pack, colorblind: settings.colorblindPalette)
+        }
+        return cosmetics.resolvedTheme
+    }
+
     private var modeTitle: String {
         switch game.mode {
         case .classic: return "Classic"
         case .daily: return "Today’s Bloom"
+        case .stage(let id): return GardenStageCatalog.stage(id: id)?.title ?? "Garden"
         }
     }
 
