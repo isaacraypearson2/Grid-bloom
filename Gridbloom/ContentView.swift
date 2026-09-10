@@ -10,6 +10,7 @@ enum AppRoute: Equatable {
     case petalCatch
     case patternBloom
     case scanFlower
+    case garden
 }
 
 struct ContentView: View {
@@ -42,6 +43,7 @@ struct ContentView: View {
                     onMiniGames: { route = .miniGames },
                     onAlbum: { route = .album },
                     onScanFlower: { route = .scanFlower },
+                    onGarden: { route = .garden },
                     onShop: { route = .shop },
                     onSettings: { route = .settings }
                 )
@@ -69,6 +71,8 @@ struct ContentView: View {
                 )
             case .scanFlower:
                 FlowerScanView(profile: profile, theme: theme, onClose: { route = .album })
+            case .garden:
+                GardenView(profile: profile, theme: theme, onClose: { route = .menu })
             case .miniGames:
                 MiniGamesView(
                     theme: theme,
@@ -114,6 +118,7 @@ struct ContentView: View {
         .onAppear {
             profile.refreshGoalsIfNeeded()
             profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
+            _ = profile.grantMilestoneUltraIfEligible()
         }
     }
 
@@ -122,7 +127,13 @@ struct ContentView: View {
         if won {
             let first = profile.unlockFlower(.orchid)
             profile.addPetals(first ? MiniGameKind.petalCatch.winPetals : MiniGameKind.petalCatch.repeatPetals)
-            showToast(first ? "Orchid joined the album" : "+\(MiniGameKind.petalCatch.repeatPetals) petals")
+            let pack = first ? MiniGameKind.petalCatch.winPack : MiniGameKind.petalCatch.repeatPack
+            _ = profile.grantPack(pack, source: MiniGameKind.petalCatch.rawValue)
+            if profile.grantMilestoneUltraIfEligible() {
+                showToast("Rare pack + Orchid · Ultra pack!")
+            } else {
+                showToast(first ? "Rare pack + Orchid" : "\(pack.title) seed pack")
+            }
         }
         route = .miniGames
     }
@@ -132,7 +143,13 @@ struct ContentView: View {
         cosmetics.unlockFromProgression(.greenhouse)
         profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
         profile.addPetals(first ? MiniGameKind.patternBloom.winPetals : MiniGameKind.patternBloom.repeatPetals)
-        showToast(first ? "Peony & Glasshouse unlocked" : "+\(MiniGameKind.patternBloom.repeatPetals) petals")
+        let pack = first ? MiniGameKind.patternBloom.winPack : MiniGameKind.patternBloom.repeatPack
+        _ = profile.grantPack(pack, source: MiniGameKind.patternBloom.rawValue)
+        if profile.grantMilestoneUltraIfEligible() {
+            showToast("Epic pack + Peony · Ultra pack!")
+        } else {
+            showToast(first ? "Epic pack + Peony & Glasshouse" : "\(pack.title) seed pack")
+        }
         route = .miniGames
     }
 

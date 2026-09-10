@@ -30,4 +30,9 @@ enum Scoring {
         guard lineCount > 0 else { return 0 }
         return lineCount + max(0, combo - 1)
     }
+
+    /// Ultra grid-wipe bonus. Extra cells that were not part of a completed line.
+    static func ultraWipeBonus(combo: Int, extraCells: Int) -> Int {
+        40 * max(1, combo) + max(0, extraCells)
+    }
 }

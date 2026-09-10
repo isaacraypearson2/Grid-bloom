@@ -453,10 +453,12 @@ final class GameScene: SKScene {
         BloomOverlay.play(
             in: self,
             species: customBloom?.guessedSpecies ?? bloomSpecies,
-            title: customBloom?.name ?? bloomSpecies.title,
+            title: result.didUltraWipe
+                ? "\(customBloom?.name ?? bloomSpecies.title)  GRID"
+                : (customBloom?.name ?? bloomSpecies.title),
             tint: customBloom?.fillColor ?? bloomSpecies.petalTint,
             stamp: customBloom.flatMap { CustomBloomDisk.stamp(id: $0.id) },
-            combo: max(1, result.combo),
+            combo: result.didUltraWipe ? max(4, result.combo) : max(1, result.combo),
             reduced: reducedMotion
         )
 
@@ -471,7 +473,7 @@ final class GameScene: SKScene {
             fontSize: result.combo >= 3 ? 22 : 17,
             reduced: reducedMotion
         )
-        if result.combo >= 2 {
+        if result.combo >= 2, !result.didUltraWipe {
             Juice.comboBanner(
                 combo: result.combo,
                 color: theme.petal,
@@ -480,8 +482,26 @@ final class GameScene: SKScene {
                 reduced: reducedMotion
             )
         }
+        if result.didUltraWipe {
+            Juice.comboBanner(
+                combo: max(5, result.combo),
+                color: bloomSpecies.petalTint,
+                in: juiceRoot,
+                at: CGPoint(x: boardRect.midX, y: boardRect.midY + 36),
+                reduced: reducedMotion
+            )
+            Juice.floatingLabel(
+                bloomSpecies.ability?.title ?? "Grid bloom",
+                at: CGPoint(x: mid.x, y: mid.y - 22),
+                color: bloomSpecies.petalTint,
+                in: juiceRoot,
+                fontSize: 16,
+                reduced: reducedMotion
+            )
+            Haptics.heavy()
+        }
 
-        let wait = reducedMotion ? 0.14 : 0.38
+        let wait = reducedMotion ? 0.14 : (result.didUltraWipe ? 0.55 : 0.38)
         run(.sequence([
             .wait(forDuration: wait),
             .run { [weak self] in
@@ -527,10 +547,11 @@ final class GameScene: SKScene {
             )
         }
         let species = FlowerSpecies(rawValue: storage) ?? FlowerSpecies.from(colorIndex: max(0, storage - 1))
+        let fill = species.rarity == .ultra ? species.petalTint : theme.pieceFill(index: species.rawValue - 1)
         return Juice.flowerTile(
             size: size,
-            fill: theme.pieceFill(index: species.rawValue - 1),
-            stroke: theme.pieceStroke(index: species.rawValue - 1),
+            fill: fill,
+            stroke: fill.darker(by: 0.16),
             theme: theme.pack,
             flower: species
         )

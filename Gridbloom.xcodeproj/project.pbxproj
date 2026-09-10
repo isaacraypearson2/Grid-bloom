@@ -72,6 +72,9 @@
 		A10000000000000000000201 /* BloomOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000200 /* BloomOverlay.swift */; };
 		A10000000000000000000203 /* FlowerScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000202 /* FlowerScanView.swift */; };
 		A10000000000000000000205 /* FlowerScanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000204 /* FlowerScanTests.swift */; };
+		A10000000000000000000207 /* SeedGarden.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000206 /* SeedGarden.swift */; };
+		A10000000000000000000209 /* GardenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000208 /* GardenView.swift */; };
+		A10000000000000000000211 /* GardenLoopTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000210 /* GardenLoopTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,6 +156,9 @@
 		A10000000000000000000200 /* BloomOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BloomOverlay.swift; sourceTree = "<group>"; };
 		A10000000000000000000202 /* FlowerScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanView.swift; sourceTree = "<group>"; };
 		A10000000000000000000204 /* FlowerScanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000206 /* SeedGarden.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedGarden.swift; sourceTree = "<group>"; };
+		A10000000000000000000208 /* GardenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenView.swift; sourceTree = "<group>"; };
+		A10000000000000000000210 /* GardenLoopTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenLoopTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -252,6 +258,7 @@
 				A10000000000000000000184 /* MiniGameRules.swift */,
 				A10000000000000000000196 /* CustomBloom.swift */,
 				A10000000000000000000198 /* FlowerScanner.swift */,
+				A10000000000000000000206 /* SeedGarden.swift */,
 			);
 			path = Game;
 			sourceTree = "<group>";
@@ -291,6 +298,7 @@
 				A10000000000000000000190 /* MiniGamesView.swift */,
 				A10000000000000000000192 /* PatternBloomView.swift */,
 				A10000000000000000000202 /* FlowerScanView.swift */,
+				A10000000000000000000208 /* GardenView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -335,6 +343,7 @@
 				A10000000000000000000165 /* AdConfigTests.swift */,
 				A10000000000000000000194 /* FlowerMetaTests.swift */,
 				A10000000000000000000204 /* FlowerScanTests.swift */,
+				A10000000000000000000210 /* GardenLoopTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -492,6 +501,8 @@
 				A10000000000000000000199 /* FlowerScanner.swift in Sources */,
 				A10000000000000000000201 /* BloomOverlay.swift in Sources */,
 				A10000000000000000000203 /* FlowerScanView.swift in Sources */,
+				A10000000000000000000207 /* SeedGarden.swift in Sources */,
+				A10000000000000000000209 /* GardenView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -511,6 +522,7 @@
 				A10000000000000000000166 /* AdConfigTests.swift in Sources */,
 				A10000000000000000000195 /* FlowerMetaTests.swift in Sources */,
 				A10000000000000000000205 /* FlowerScanTests.swift in Sources */,
+				A10000000000000000000211 /* GardenLoopTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

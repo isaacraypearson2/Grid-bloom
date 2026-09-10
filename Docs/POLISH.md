@@ -4,9 +4,9 @@ What shipped on top of Classic Garden, Greenhouse ad packs, Bloom revive, and Ne
 
 ## Flower-forward core
 
-Tiles are **flower species** (tulip, daisy, rose, lily, lavender, hydrangea, plus unlockable orchid, peony, lotus, cactus bloom, moonflower, cherry blossom). Color is still the ceramic fill.
+Tiles are **flower species** (tulip, daisy, rose, lily, lavender, hydrangea, plus unlockable orchid, peony, lotus, cactus bloom, moonflower, cherry blossom, and Ultra **Starfire / Night orchid / Sunburst**). Color is still the ceramic fill.
 
-- Classic Garden deals from the player’s unlocked album.
+- Classic Garden deals from the player’s unlocked album, including harvested garden flowers.
 - **Today’s Bloom** always deals the six starters so UTC trays stay fair and deterministic.
 
 ## Map / garden skins
@@ -41,35 +41,62 @@ Album → **Scan**, or the camera button on the menu.
 - **Daily goals** — three UTC-stable chores (lines / combo / score / petal catch). Auto-claim, once per goal.
 - **Streak** — unchanged Today’s Bloom UTC streak.
 - **Album** — collect species. Rank: Sprout → Gardener → Bloomkeeper → Master florist.
-- Rewarded **Bloom revive**, **New tray**, and Greenhouse **Watch to unlock** are unchanged and still player-initiated.
+- Rewarded **Bloom revive**, **New tray**, and Greenhouse **Watch to unlock** are unchanged and still player-initiated. Optional **Watch to bloom** on a growing plot uses the same rewarded unit and is never required to play Classic Garden.
+
+## Garden growing loop
+
+Menu → **My garden** (leaf). Six beds. New profiles start with tulip, daisy, and rose seeds.
+
+- Plant a seed; it grows in real time (Common 1 min, Rare 3, Epic 8, Ultra 15).
+- **Watch to bloom** finishes that plot immediately (player-initiated rewarded ad). You can always wait instead.
+- Harvest unlocks that species for Classic Garden tiles and pays a few petals.
+- Unlocks persist on `PlayerProfile` (plots, seed inventory, unopened packs).
+
+## Seed packs
+
+Fair gacha: a pack of rarity **X only grants seeds of that tier**. Clear Common / Rare / Epic / Ultra colors when you open it.
+
+| Pack | How to get | Contents |
+| --- | --- | --- |
+| Common | Petal Catch repeats, or 18 petals | 3 Common seeds |
+| Rare | First Petal Catch, Pattern Bloom repeats, or 40 petals | 2 Rare seeds |
+| Epic | First Pattern Bloom, or 70 petals | 1 Epic seed |
+| Ultra | Winning **both** side gardens (once), or 120 petals | 1 Ultra seed |
+
+## Ultra abilities
+
+Starfire, Night orchid, and Sunburst are Ultra. Common–Epic are collection/score only. Matching a line whose **dominant** flower is Ultra **clears the rest of the board** (Classic only) with a GRID bloom. Today’s Bloom never deals Ultras and never wipes.
 
 ## Mini-games
 
 From the menu **Side gardens**:
 
-1. **Petal Catch** — tap falling petals, catch 10 in 22s. First win unlocks **Orchid**.
-2. **Pattern Bloom** — repeat the flashed flowers for 3 rounds. First win unlocks **Peony** and the **Glasshouse** map.
+1. **Petal Catch** — tap falling petals, catch 10 in 22s. First win: **Orchid** + Rare pack. Repeats: Common pack.
+2. **Pattern Bloom** — repeat the flashed flowers for 3 rounds. First win: **Peony**, **Glasshouse**, Epic pack. Repeats: Rare pack.
 
-Repeats still pay a small petal bonus.
+Winning both games once also grants a single **Ultra** pack. Repeats still pay a small petal bonus.
 
 ## UI polish
 
-- First-run onboarding (5 short pages, skippable) plus in-game “Drag a flower…” hint.
+- First-run onboarding (6 short pages, skippable) plus in-game “Drag a flower…” hint.
 - Settings: How to play, haptics, sound, color-distinct pieces, Reduce Motion.
-- Menu shows petals, rank, daily goals, album, and side gardens.
+- Menu shows petals, rank, daily goals, album, **My garden**, and side gardens.
 
 ## How to test in Xcode Simulator
 
 1. Open `Gridbloom.xcodeproj` in Xcode 16+ (iOS 16+ iPhone simulator).
-2. **Product → Test (⌘U)** — includes flower roster, daily goals, Pattern Bloom, Glasshouse / Desert Bloom unlocks. Ads still use `MockRewardedAdService`.
+2. **Product → Test (⌘U)** — includes flower roster, garden growth/harvest, seed-pack rarity, Ultra grid wipe, daily goals, Pattern Bloom, Glasshouse / Desert Bloom unlocks. Ads still use `MockRewardedAdService`.
 3. **Product → Run (⌘R)** on an iPhone simulator.
 4. Skip or finish onboarding. **Play** Classic Garden: pieces should show flower glyphs; clearing a line should flash a **full-screen bloom of that flower type** (bigger with combo), then let you keep playing.
 5. Menu camera or Album → **Scan**. Simulator: use Photo Library (camera is limited; grant Photos if the camera fallback asks). Pick any colorful image. Plant it; it should show in the album. Start Classic Garden — the opening tray can already show that stamp. Today’s Bloom should not deal scanned tiles. A dull/gray photo is named **Custom bloom**.
 6. Menu → **Flower album** (book). Starters unlock as you place them. Buy Lotus if you have 30 petals (play a bit, or complete daily goals).
-7. Menu → **Side gardens** → Petal Catch. Catch 10 petals; album should show Orchid. Pattern Bloom: watch, repeat; Glasshouse should appear in Greenhouse and become selectable.
+7. Menu → **Side gardens** → Petal Catch. Catch 10 petals; album should show Orchid and **My garden** should have a Rare pack. Pattern Bloom: watch, repeat; Glasshouse + Epic pack. Winning **both** should add one Ultra pack (once).
 8. Greenhouse: Meadow Clay is free. Glasshouse **Use** after Pattern Bloom. Desert Bloom **40 petals**. Sakura / Night / Sunflower still **Watch to unlock** (DEBUG `forceGoogleTestAds` if AdMob isn’t filling).
 9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads.
 10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this).
 11. Settings → Reduce Motion: full-screen bloom is a brief tint; tiles should not shake / punch / spray petals.
+12. **My garden**: plant a starter seed. Either wait ~60s or tap **Watch to bloom** (optional ad). **Harvest** — that flower is collected. Open a seed pack and confirm the rarity banner and seed names match the pack tier.
+13. Buy a Common pack for 18 petals (play a bit first). Classic Garden must remain playable with an empty garden / no ads.
+14. Open the Ultra pack (from both mini-games, or 120 petals). Plant, boost/harvest Starfire (or Night orchid / Sunburst). In **Classic** only, complete a line that is mostly that Ultra flower — the rest of the board should wipe with a GRID bloom. Today’s Bloom should not deal Ultras or wipe.
 
 AdMob / StoreKit paths were not removed. `Products.storekit` remains unused by the shop. Restore still imports leftover IAP entitlements.

@@ -329,6 +329,15 @@ enum FlowerGlyph {
         case .cherryBlossom:
             addPetals(to: root, count: 5, length: size * 0.36, width: size * 0.18, color: petal)
             addCenter(to: root, radius: size * 0.08, color: UIColor(red: 0.86, green: 0.42, blue: 0.5, alpha: 1))
+        case .starfire:
+            addPetals(to: root, count: 12, length: size * 0.4, width: size * 0.08, color: petal)
+            addCenter(to: root, radius: size * 0.12, color: center)
+        case .nightOrchid:
+            addPetals(to: root, count: 5, length: size * 0.42, width: size * 0.14, color: petal)
+            addCenter(to: root, radius: size * 0.09, color: UIColor(red: 0.2, green: 0.12, blue: 0.4, alpha: 1))
+        case .sunburst:
+            addPetals(to: root, count: 16, length: size * 0.38, width: size * 0.07, color: petal)
+            addCenter(to: root, radius: size * 0.13, color: center)
         }
         return root
     }
@@ -414,10 +423,13 @@ final class PieceSprite: SKNode {
                 }
                 node = shape
             } else {
+                let fill = piece.flower.rarity == .ultra
+                    ? piece.flower.petalTint
+                    : theme.pieceFill(index: piece.colorIndex)
                 node = Juice.flowerTile(
                     size: size,
-                    fill: theme.pieceFill(index: piece.colorIndex),
-                    stroke: theme.pieceStroke(index: piece.colorIndex),
+                    fill: fill,
+                    stroke: fill.darker(by: 0.16),
                     theme: theme.pack,
                     flower: piece.flower,
                     stamp: stamp

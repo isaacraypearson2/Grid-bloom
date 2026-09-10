@@ -15,6 +15,7 @@ struct PlaceResult: Equatable {
     var combo: Int
     var trayRefilled: Bool
     var isGameOver: Bool
+    var didUltraWipe: Bool
 }
 
 /// Mutable match: board, tray of three, score, combo, and game-over.
@@ -94,8 +95,12 @@ final class GameState: ObservableObject {
     /// Overlay scanned stamps in place (no extra RNG) so they can show immediately.
     func restampOpeningTrayIfNeeded() {
         guard mode == .classic, board.occupiedCount == 0, score == 0, !dealer.customBlooms.isEmpty else { return }
-        let next = tray.map { piece in piece.map { dealer.overlayCustom($0) } }
-        let changed = zip(tray, next).contains { $0?.customBloomID != $1?.customBloomID }
+        let next = tray.map { piece in
+            piece.map { dealer.overlayCustom(dealer.overlayUltra($0)) }
+        }
+        let changed = zip(tray, next).contains { lhs, rhs in
+            lhs?.customBloomID != rhs?.customBloomID || lhs?.flower != rhs?.flower
+        }
         guard changed else { return }
         tray = next
     }
@@ -138,13 +143,29 @@ final class GameState: ObservableObject {
         board.place(piece, at: origin)
         tray[trayIndex] = nil
 
-        let clear = board.clearCompletedLines()
+        var clear = board.clearCompletedLines()
+        var didUltraWipe = false
+        if mode == .classic,
+           let species = FlowerSpecies(rawValue: clear.dominantStorage),
+           species.ability == .gridWipe {
+            let extra = board.occupiedPoints()
+            if !extra.isEmpty {
+                board.clearCells(extra)
+                clear.clearedCells.append(contentsOf: extra)
+            }
+            didUltraWipe = !clear.isEmpty
+        }
+
         combo = Scoring.nextCombo(current: combo, didClear: !clear.isEmpty)
-        let delta = Scoring.totalScore(
+        var delta = Scoring.totalScore(
             cellCount: piece.cellCount,
             lineCount: clear.lineCount,
             comboAfterMove: combo
         )
+        if didUltraWipe {
+            let extra = max(0, clear.cellsCleared - clear.lineCount * Board.size)
+            delta += Scoring.ultraWipeBonus(combo: combo, extraCells: extra)
+        }
         score += delta
         bestScore = scoreStore.updateBest(for: mode, utcDay: utcDay, score: score)
 
@@ -175,7 +196,8 @@ final class GameState: ObservableObject {
             scoreDelta: delta,
             combo: combo,
             trayRefilled: refilled,
-            isGameOver: isGameOver
+            isGameOver: isGameOver,
+            didUltraWipe: didUltraWipe
         )
         lastPlace = result
         return result

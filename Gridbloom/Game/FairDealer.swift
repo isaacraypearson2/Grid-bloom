@@ -106,7 +106,15 @@ struct FairDealer {
 
     private func stamp(_ piece: Piece) -> Piece {
         let flower = FlowerSpecies.playable(at: piece.colorIndex, unlocked: flowerRoster)
-        return overlayCustom(piece.spawned(flower: flower))
+        return overlayCustom(overlayUltra(piece.spawned(flower: flower)))
+    }
+
+    /// Classic-only ultras, derived from colorIndex — no extra RNG.
+    func overlayUltra(_ piece: Piece) -> Piece {
+        guard piece.customBloomID == nil, piece.flower.rarity != .ultra else { return piece }
+        let ultras = flowerRoster.filter { $0.rarity == .ultra }.sorted { $0.rawValue < $1.rawValue }
+        guard !ultras.isEmpty, piece.colorIndex % 4 == 1 else { return piece }
+        return piece.spawned(flower: ultras[abs(piece.colorIndex) % ultras.count])
     }
 
     /// Applies a scanned stamp from `colorIndex` with no extra RNG.

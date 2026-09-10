@@ -4,6 +4,7 @@ enum RewardedPlacement: String, Equatable {
     case continueGame
     case shuffleTray
     case unlockCosmetic
+    case speedGrowth
 }
 
 /// Ads are always player-initiated. The app target uses `AdMobRewardedAdService`.

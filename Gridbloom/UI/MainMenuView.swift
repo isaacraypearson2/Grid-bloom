@@ -17,6 +17,7 @@ struct MainMenuView: View {
     var onMiniGames: () -> Void
     var onAlbum: () -> Void
     var onScanFlower: () -> Void
+    var onGarden: () -> Void
     var onShop: () -> Void
     var onSettings: () -> Void
 
@@ -27,6 +28,7 @@ struct MainMenuView: View {
                 HStack {
                     IconCircleButton(systemName: "bag", label: "Shop", theme: theme, action: onShop)
                     IconCircleButton(systemName: "book.fill", label: "Album", theme: theme, action: onAlbum)
+                    IconCircleButton(systemName: "leaf.circle.fill", label: "My garden", theme: theme, action: onGarden)
                     IconCircleButton(systemName: "camera.fill", label: "Scan a flower", theme: theme, action: onScanFlower)
                     Spacer()
                     IconCircleButton(systemName: "slider.horizontal.3", label: "Settings", theme: theme, action: onSettings)
@@ -67,8 +69,13 @@ struct MainMenuView: View {
                     }
                     .buttonStyle(GardenButtonStyle(fill: GardenPalette.dailyFill))
 
+                    Button(action: onGarden) {
+                        menuLabel(title: "My garden", subtitle: "Grow seeds · harvest tiles", systemImage: "leaf.circle.fill")
+                    }
+                    .buttonStyle(GardenButtonStyle(fill: Color(red: 0.46, green: 0.62, blue: 0.42)))
+
                     Button(action: onMiniGames) {
-                        menuLabel(title: "Side gardens", subtitle: "Catch petals · Pattern bloom", systemImage: "sparkles")
+                        menuLabel(title: "Side gardens", subtitle: "Catch petals · earn seed packs", systemImage: "sparkles")
                     }
                     .buttonStyle(GardenButtonStyle(fill: Color(red: 0.58, green: 0.62, blue: 0.82)))
                 }

@@ -35,7 +35,7 @@ struct SettingsView: View {
                     showHelp = true
                 }
 
-                Text("Ads never start themselves. Continue, New tray, and Greenhouse unlocks only run when you tap them.")
+                Text("Ads never start themselves. Continue, New tray, Greenhouse unlocks, and optional garden speed-ups only run when you tap them.")
                     .font(.system(.footnote, design: .rounded))
                     .foregroundColor(theme.inkSoft)
                     .padding(.top, 8)

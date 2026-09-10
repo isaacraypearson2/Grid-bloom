@@ -97,6 +97,9 @@ struct AlbumView: View {
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(theme.inkSoft)
             }
+            Text(species.rarity.title)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundColor(species.rarity.ink)
             Text(status == .locked ? "???" : species.title)
                 .font(.system(.headline, design: .rounded).weight(.bold))
                 .foregroundColor(theme.ink)
@@ -171,6 +174,8 @@ extension FlowerSpecies {
             return "Spend \(cost) petals in the album."
         case .mapSkin(let pack):
             return "Unlock the \(pack.title) map."
+        case .seedPack(let rarity):
+            return "Grow a \(rarity.title) seed and harvest it in My garden."
         }
     }
 }

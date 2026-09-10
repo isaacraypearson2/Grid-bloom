@@ -19,7 +19,7 @@ struct MiniGamesView: View {
                         Text("Side gardens")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("Short games that unlock flowers and maps. Classic Garden stays free to play.")
+                        Text("Short games that unlock seed packs, flowers, and maps. Classic Garden stays free to play.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -30,14 +30,14 @@ struct MiniGamesView: View {
                 gameCard(
                     title: MiniGameKind.petalCatch.title,
                     blurb: MiniGameKind.petalCatch.blurb,
-                    reward: orchidUnlocked ? "Orchid collected" : "Unlocks Orchid",
+                    reward: orchidUnlocked ? "Orchid collected · seed packs" : "Unlocks Orchid + Rare pack",
                     systemImage: "leaf.fill",
                     action: onPetalCatch
                 )
                 gameCard(
                     title: MiniGameKind.patternBloom.title,
                     blurb: MiniGameKind.patternBloom.blurb,
-                    reward: greenhouseOwned && peonyUnlocked ? "Peony & Glasshouse yours" : "Unlocks Peony + Glasshouse",
+                    reward: greenhouseOwned && peonyUnlocked ? "Peony, Glasshouse, seed packs" : "Unlocks Peony, Glasshouse + Epic pack",
                     systemImage: "sparkles",
                     action: onPatternBloom
                 )
@@ -120,7 +120,7 @@ struct PetalCatchView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                Text("Tap petals before they wilt. Catch \(PetalCatchRules.winCatches) to invite Orchid.")
+                    Text("Tap petals before they wilt. Catch \(PetalCatchRules.winCatches) for a seed pack.")
                     .font(.system(.caption, design: .rounded))
                     .foregroundColor(theme.inkSoft)
                     .padding(.bottom, 8)

@@ -15,6 +15,9 @@ enum FlowerSpecies: Int, CaseIterable, Codable, Identifiable, Equatable, Hashabl
     case cactusBloom = 10
     case moonflower = 11
     case cherryBlossom = 12
+    case starfire = 13
+    case nightOrchid = 14
+    case sunburst = 15
 
     var id: String { rawValue.description }
 
@@ -36,6 +39,9 @@ enum FlowerSpecies: Int, CaseIterable, Codable, Identifiable, Equatable, Hashabl
         case .cactusBloom: return "Cactus bloom"
         case .moonflower: return "Moonflower"
         case .cherryBlossom: return "Cherry blossom"
+        case .starfire: return "Starfire"
+        case .nightOrchid: return "Night orchid"
+        case .sunburst: return "Sunburst"
         }
     }
 
@@ -53,6 +59,9 @@ enum FlowerSpecies: Int, CaseIterable, Codable, Identifiable, Equatable, Hashabl
         case .cactusBloom: return "Blooms once Desert Bloom is yours."
         case .moonflower: return "Opens with Moonlight Garden."
         case .cherryBlossom: return "Travels with Sakura Petals."
+        case .starfire: return "Ultra. Matching a set wipes the whole board."
+        case .nightOrchid: return "Ultra. A night bloom that clears the grid."
+        case .sunburst: return "Ultra. Matching it blooms the entire garden."
         }
     }
 
@@ -72,7 +81,26 @@ enum FlowerSpecies: Int, CaseIterable, Codable, Identifiable, Equatable, Hashabl
             return .mapSkin(.moonlight)
         case .cherryBlossom:
             return .mapSkin(.sakura)
+        case .starfire, .nightOrchid, .sunburst:
+            return .seedPack(.ultra)
         }
+    }
+
+    var rarity: SeedRarity {
+        switch self {
+        case .tulip, .daisy, .rose, .lily, .lavender, .hydrangea:
+            return .common
+        case .orchid, .peony:
+            return .rare
+        case .lotus, .cactusBloom, .moonflower, .cherryBlossom:
+            return .epic
+        case .starfire, .nightOrchid, .sunburst:
+            return .ultra
+        }
+    }
+
+    var ability: FlowerAbility? {
+        rarity == .ultra ? .gridWipe : nil
     }
 
     var petalTint: UIColor {
@@ -89,6 +117,9 @@ enum FlowerSpecies: Int, CaseIterable, Codable, Identifiable, Equatable, Hashabl
         case .cactusBloom: return UIColor(red: 0.92, green: 0.48, blue: 0.62, alpha: 1)
         case .moonflower: return UIColor(red: 0.82, green: 0.86, blue: 0.96, alpha: 1)
         case .cherryBlossom: return UIColor(red: 0.96, green: 0.70, blue: 0.78, alpha: 1)
+        case .starfire: return UIColor(red: 0.98, green: 0.62, blue: 0.22, alpha: 1)
+        case .nightOrchid: return UIColor(red: 0.42, green: 0.28, blue: 0.72, alpha: 1)
+        case .sunburst: return UIColor(red: 0.98, green: 0.84, blue: 0.28, alpha: 1)
         }
     }
 
@@ -125,8 +156,22 @@ enum MiniGameKind: String, Codable, Equatable, Sendable {
 
     var blurb: String {
         switch self {
-        case .petalCatch: return "Tap falling petals before they wilt. First win unlocks Orchid."
-        case .patternBloom: return "Watch the bloom, repeat the pattern. First win unlocks Peony and Glasshouse."
+        case .petalCatch: return "Tap falling petals before they wilt. Wins grant a seed pack (Rare first, then Common) and invite Orchid."
+        case .patternBloom: return "Watch the bloom, repeat the pattern. First win: Peony, Glasshouse, and an Epic pack. Repeats: a Rare pack."
+        }
+    }
+
+    var winPack: SeedRarity {
+        switch self {
+        case .petalCatch: return .rare
+        case .patternBloom: return .epic
+        }
+    }
+
+    var repeatPack: SeedRarity {
+        switch self {
+        case .petalCatch: return .common
+        case .patternBloom: return .rare
         }
     }
 
@@ -159,6 +204,7 @@ enum FlowerUnlock: Equatable, Sendable {
     case miniGame(MiniGameKind)
     case petals(Int)
     case mapSkin(CosmeticPack)
+    case seedPack(SeedRarity)
 }
 
 enum GardenRank: String, Equatable, Sendable {

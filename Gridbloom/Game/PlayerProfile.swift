@@ -20,6 +20,11 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var lastClaimedGoalIDs: [String] = []
     @Published private(set) var lastPetalsAwarded: Int = 0
     @Published private(set) var customBlooms: [CustomBloom]
+    @Published private(set) var gardenPlots: [GardenPlot]
+    @Published private(set) var seedCounts: [String: Int]
+    @Published private(set) var seedPacks: [OwnedSeedPack]
+    @Published private(set) var lastPackReveal: PackReveal?
+    @Published private(set) var lastHarvested: FlowerSpecies?
 
     private let defaults: UserDefaults
 
@@ -36,6 +41,11 @@ final class PlayerProfile: ObservableObject {
         static let collected = "gridbloom.profile.collectedFlowers"
         static let goals = "gridbloom.profile.dailyGoals"
         static let blooms = "gridbloom.profile.customBlooms"
+        static let plots = "gridbloom.profile.gardenPlots"
+        static let seeds = "gridbloom.profile.seedCounts"
+        static let packs = "gridbloom.profile.seedPacks"
+        static let starterSeeds = "gridbloom.profile.starterSeeds"
+        static let ultraMilestone = "gridbloom.profile.ultraMilestone"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -55,6 +65,32 @@ final class PlayerProfile: ObservableObject {
             customBlooms = blooms
         } else {
             customBlooms = []
+        }
+        if let plotData = defaults.data(forKey: Keys.plots),
+           let plots = try? JSONDecoder().decode([GardenPlot].self, from: plotData) {
+            gardenPlots = plots
+        } else {
+            gardenPlots = []
+        }
+        if let seedData = defaults.data(forKey: Keys.seeds),
+           let counts = try? JSONDecoder().decode([String: Int].self, from: seedData) {
+            seedCounts = counts
+        } else {
+            seedCounts = [:]
+        }
+        if let packData = defaults.data(forKey: Keys.packs),
+           let packs = try? JSONDecoder().decode([OwnedSeedPack].self, from: packData) {
+            seedPacks = packs
+        } else {
+            seedPacks = []
+        }
+        lastPackReveal = nil
+        lastHarvested = nil
+        if !defaults.bool(forKey: Keys.starterSeeds) {
+            defaults.set(true, forKey: Keys.starterSeeds)
+            addSeed(.tulip)
+            addSeed(.daisy)
+            addSeed(.rose)
         }
         if let data = defaults.data(forKey: Keys.goals),
            let decoded = try? JSONDecoder().decode(DailyGoalProgress.self, from: data) {
@@ -260,6 +296,147 @@ final class PlayerProfile: ObservableObject {
         CustomBloomDisk.remove(id: id)
         customBlooms.removeAll { $0.id == id }
         persistCustomBlooms()
+    }
+
+    func seedCount(for species: FlowerSpecies) -> Int {
+        max(0, seedCounts[String(species.rawValue)] ?? 0)
+    }
+
+    var inventorySeeds: [(FlowerSpecies, Int)] {
+        FlowerSpecies.allCases.compactMap { species in
+            let count = seedCount(for: species)
+            return count > 0 ? (species, count) : nil
+        }
+    }
+
+    var emptyGardenSlots: [Int] {
+        let used = Set(gardenPlots.map(\.slot))
+        return (0..<SeedGardenRules.plotCount).filter { !used.contains($0) }
+    }
+
+    func addSeed(_ species: FlowerSpecies, count: Int = 1) {
+        guard count > 0 else { return }
+        let key = String(species.rawValue)
+        seedCounts[key] = seedCount(for: species) + count
+        persistSeeds()
+    }
+
+    @discardableResult
+    func grantPack(_ rarity: SeedRarity, source: String) -> OwnedSeedPack {
+        let pack = OwnedSeedPack(id: UUID(), rarity: rarity, source: source)
+        seedPacks.append(pack)
+        persistPacks()
+        return pack
+    }
+
+    /// First time both side gardens are won, grant one Ultra pack. Classic Garden stays free.
+    @discardableResult
+    func grantMilestoneUltraIfEligible() -> Bool {
+        guard unlockedFlowers.contains(.orchid), unlockedFlowers.contains(.peony) else { return false }
+        guard !defaults.bool(forKey: Keys.ultraMilestone) else { return false }
+        defaults.set(true, forKey: Keys.ultraMilestone)
+        grantPack(.ultra, source: "side-gardens")
+        return true
+    }
+
+    @discardableResult
+    func buyPack(_ rarity: SeedRarity) -> OwnedSeedPack? {
+        guard spendPetals(rarity.petalCost) else { return nil }
+        return grantPack(rarity, source: "petals")
+    }
+
+    @discardableResult
+    func openPack(_ id: UUID) -> PackReveal? {
+        guard let index = seedPacks.firstIndex(where: { $0.id == id }) else { return nil }
+        let pack = seedPacks.remove(at: index)
+        persistPacks()
+        var rng = SplitMix64(seed: DailySeed.fnv1a64(id.uuidString))
+        let seeds = SeedGardenRules.roll(rarity: pack.rarity, rng: &rng)
+        for species in seeds {
+            addSeed(species)
+        }
+        let reveal = PackReveal(rarity: pack.rarity, seeds: seeds)
+        lastPackReveal = reveal
+        return reveal
+    }
+
+    func clearPackReveal() {
+        lastPackReveal = nil
+    }
+
+    @discardableResult
+    func plantSeed(_ species: FlowerSpecies, slot: Int, now: Date = Date()) -> GardenPlot? {
+        guard emptyGardenSlots.contains(slot) else { return nil }
+        guard consumeSeed(species) else { return nil }
+        let duration = species.rarity.growDuration
+        let plot = GardenPlot(
+            id: UUID(),
+            slot: slot,
+            speciesRaw: species.rawValue,
+            plantedAt: now,
+            finishesAt: now.addingTimeInterval(duration),
+            boosted: false
+        )
+        gardenPlots.append(plot)
+        persistPlots()
+        return plot
+    }
+
+    @discardableResult
+    func boostPlot(_ id: UUID, now: Date = Date()) -> Bool {
+        guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return false }
+        var plot = gardenPlots[index]
+        guard !plot.isReady(now: now) else { return false }
+        plot.finishesAt = now
+        plot.boosted = true
+        gardenPlots[index] = plot
+        persistPlots()
+        return true
+    }
+
+    @discardableResult
+    func harvestPlot(_ id: UUID, now: Date = Date()) -> FlowerSpecies? {
+        guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return nil }
+        let plot = gardenPlots[index]
+        guard plot.isReady(now: now) else { return nil }
+        gardenPlots.remove(at: index)
+        persistPlots()
+        let species = plot.species
+        unlockFlower(species)
+        lastHarvested = species
+        addPetals(SeedGardenRules.harvestPetals)
+        return species
+    }
+
+    private func consumeSeed(_ species: FlowerSpecies) -> Bool {
+        let key = String(species.rawValue)
+        let count = seedCount(for: species)
+        guard count > 0 else { return false }
+        if count == 1 {
+            seedCounts.removeValue(forKey: key)
+        } else {
+            seedCounts[key] = count - 1
+        }
+        persistSeeds()
+        return true
+    }
+
+    private func persistPlots() {
+        if let data = try? JSONEncoder().encode(gardenPlots) {
+            defaults.set(data, forKey: Keys.plots)
+        }
+    }
+
+    private func persistSeeds() {
+        if let data = try? JSONEncoder().encode(seedCounts) {
+            defaults.set(data, forKey: Keys.seeds)
+        }
+    }
+
+    private func persistPacks() {
+        if let data = try? JSONEncoder().encode(seedPacks) {
+            defaults.set(data, forKey: Keys.packs)
+        }
     }
 
     private func persistCustomBlooms() {
