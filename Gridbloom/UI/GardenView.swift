@@ -27,34 +27,35 @@ struct GardenView: View {
                     IconCircleButton(systemName: "xmark", label: "Close", theme: theme, action: onClose)
                 }
 
-                fertilizerBar
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        fertilizerBar
+                        packsRow
+                        shopRow
 
-                TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        ForEach(0..<SeedGardenRules.plotCount, id: \.self) { slot in
-                            plotCard(slot: slot, now: timeline.date)
+                        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                ForEach(0..<SeedGardenRules.plotCount, id: \.self) { slot in
+                                    plotCard(slot: slot, now: timeline.date)
+                                }
+                            }
+                        }
+                        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+                            profile.tickGarden(now: date)
+                            presentGardenEvent()
+                        }
+
+                        Text("\(profile.petals) petals  ·  \(profile.inventorySeeds.reduce(0) { $0 + $1.1 }) seeds  ·  \(profile.fertilizerCharges) fertilizer")
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundColor(theme.inkSoft)
+
+                        if let toast {
+                            Text(toast)
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundColor(theme.accent)
                         }
                     }
                 }
-                .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
-                    profile.tickGarden(now: date)
-                    presentGardenEvent()
-                }
-
-                packsRow
-                shopRow
-
-                Text("\(profile.petals) petals  ·  \(profile.inventorySeeds.reduce(0) { $0 + $1.1 }) seeds  ·  \(profile.fertilizerCharges) fertilizer")
-                    .font(.system(.caption, design: .rounded).weight(.semibold))
-                    .foregroundColor(theme.inkSoft)
-
-                if let toast {
-                    Text(toast)
-                        .font(.system(.caption, design: .rounded).weight(.semibold))
-                        .foregroundColor(theme.accent)
-                }
-
-                Spacer(minLength: 0)
             }
             .padding(22)
 

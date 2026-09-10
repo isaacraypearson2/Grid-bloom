@@ -200,28 +200,23 @@ enum Juice {
         root.addChild(body)
 
         let highlight = SKShapeNode(ellipseOf: CGSize(width: size * 0.55, height: size * 0.28))
-        highlight.fillColor = UIColor.white.withAlphaComponent(theme == .moonlight ? 0.28 : 0.22)
+        highlight.fillColor = UIColor.white.withAlphaComponent(theme == .moonlight ? 0.16 : 0.12)
         highlight.strokeColor = .clear
         highlight.position = CGPoint(x: -size * 0.08, y: size * 0.16)
         highlight.zPosition = 1
         root.addChild(highlight)
 
-        let sheen = SKShapeNode(ellipseOf: CGSize(width: size * 0.16, height: size * 0.1))
-        sheen.fillColor = UIColor.white.withAlphaComponent(0.35)
-        sheen.strokeColor = .clear
-        sheen.position = CGPoint(x: -size * 0.16, y: size * 0.18)
-        sheen.zPosition = 2
-        root.addChild(sheen)
-
         if let stamp {
             let sprite = SKSpriteNode(
                 texture: SKTexture(image: stamp),
-                size: CGSize(width: size * 0.72, height: size * 0.72)
+                size: CGSize(width: size * 0.78, height: size * 0.78)
             )
+            sprite.name = "flower-glyph"
             sprite.zPosition = 3
             root.addChild(sprite)
         } else if let flower {
-            let glyph = FlowerGlyph.node(species: flower, size: size * 0.62, fill: fill)
+            let glyph = FlowerGlyph.node(species: flower, size: size * 0.86, fill: fill)
+            glyph.name = "flower-glyph"
             glyph.zPosition = 3
             root.addChild(glyph)
         }
@@ -274,70 +269,70 @@ enum Juice {
 enum FlowerGlyph {
     static func node(species: FlowerSpecies, size: CGFloat, fill: UIColor) -> SKNode {
         let root = SKNode()
-        let petal = UIColor.white.withAlphaComponent(0.9)
-        let center = fill
-        let ink = fill.darker(by: 0.22)
+        root.name = "flower-glyph"
+        let petal = UIColor(red: 1, green: 0.98, blue: 0.94, alpha: 1)
+        let ink = fill.darker(by: 0.42)
+        let butter = UIColor(red: 0.96, green: 0.86, blue: 0.38, alpha: 1)
+        let stroke = max(1.15, size * 0.045)
 
         switch species {
         case .tulip:
-            addPetals(to: root, count: 3, length: size * 0.42, width: size * 0.22, color: petal, start: -0.5, span: 1.0)
-            addCenter(to: root, radius: size * 0.1, color: center)
+            addPetals(to: root, count: 3, length: size * 0.48, width: size * 0.26, color: petal, ink: ink, stroke: stroke, start: -0.5, span: 1.0)
+            addCenter(to: root, radius: size * 0.12, color: butter, ink: ink, stroke: stroke)
         case .daisy:
-            addPetals(to: root, count: 8, length: size * 0.38, width: size * 0.12, color: petal)
-            addCenter(to: root, radius: size * 0.14, color: UIColor(red: 0.96, green: 0.78, blue: 0.22, alpha: 1))
+            addPetals(to: root, count: 8, length: size * 0.44, width: size * 0.14, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.15, color: butter, ink: ink, stroke: stroke)
         case .rose:
-            addPetals(to: root, count: 6, length: size * 0.32, width: size * 0.2, color: petal)
-            addCenter(to: root, radius: size * 0.12, color: center)
-            let inner = SKShapeNode(circleOfRadius: size * 0.06)
-            inner.fillColor = ink.withAlphaComponent(0.35)
-            inner.strokeColor = .clear
-            root.addChild(inner)
+            addPetals(to: root, count: 6, length: size * 0.38, width: size * 0.22, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.13, color: butter, ink: ink, stroke: stroke)
         case .lily:
-            addPetals(to: root, count: 6, length: size * 0.4, width: size * 0.14, color: petal)
-            addCenter(to: root, radius: size * 0.08, color: UIColor(red: 0.96, green: 0.82, blue: 0.28, alpha: 1))
+            addPetals(to: root, count: 6, length: size * 0.46, width: size * 0.16, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.1, color: butter, ink: ink, stroke: stroke)
         case .lavender:
             for i in 0..<3 {
-                let bud = SKShapeNode(circleOfRadius: size * 0.09)
+                let bud = SKShapeNode(circleOfRadius: size * 0.11)
                 bud.fillColor = petal
-                bud.strokeColor = .clear
+                bud.strokeColor = ink
+                bud.lineWidth = stroke
                 bud.position = CGPoint(x: CGFloat(i - 1) * size * 0.16, y: CGFloat(i % 2) * size * 0.1)
                 root.addChild(bud)
             }
         case .hydrangea:
             for p in [CGPoint(x: -0.14, y: 0.1), CGPoint(x: 0.14, y: 0.1), CGPoint(x: -0.1, y: -0.12), CGPoint(x: 0.12, y: -0.1), .zero] {
-                let bud = SKShapeNode(circleOfRadius: size * 0.1)
-                bud.fillColor = petal.withAlphaComponent(0.92)
-                bud.strokeColor = .clear
+                let bud = SKShapeNode(circleOfRadius: size * 0.11)
+                bud.fillColor = petal
+                bud.strokeColor = ink
+                bud.lineWidth = stroke
                 bud.position = CGPoint(x: p.x * size, y: p.y * size)
                 root.addChild(bud)
             }
         case .orchid:
-            addPetals(to: root, count: 5, length: size * 0.4, width: size * 0.16, color: petal)
-            addCenter(to: root, radius: size * 0.1, color: center)
+            addPetals(to: root, count: 5, length: size * 0.46, width: size * 0.18, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.12, color: butter, ink: ink, stroke: stroke)
         case .peony:
-            addPetals(to: root, count: 10, length: size * 0.34, width: size * 0.12, color: petal)
-            addCenter(to: root, radius: size * 0.12, color: center)
+            addPetals(to: root, count: 10, length: size * 0.4, width: size * 0.14, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.13, color: butter, ink: ink, stroke: stroke)
         case .lotus:
-            addPetals(to: root, count: 8, length: size * 0.36, width: size * 0.16, color: petal, start: 0, span: .pi)
-            addCenter(to: root, radius: size * 0.1, color: UIColor(red: 0.98, green: 0.9, blue: 0.55, alpha: 1))
+            addPetals(to: root, count: 8, length: size * 0.42, width: size * 0.18, color: petal, ink: ink, stroke: stroke, start: 0, span: .pi)
+            addCenter(to: root, radius: size * 0.12, color: butter, ink: ink, stroke: stroke)
         case .cactusBloom:
-            addPetals(to: root, count: 6, length: size * 0.34, width: size * 0.1, color: petal)
-            addCenter(to: root, radius: size * 0.11, color: center)
+            addPetals(to: root, count: 6, length: size * 0.4, width: size * 0.12, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.12, color: butter, ink: ink, stroke: stroke)
         case .moonflower:
-            addPetals(to: root, count: 5, length: size * 0.38, width: size * 0.16, color: petal)
-            addCenter(to: root, radius: size * 0.1, color: UIColor.white)
+            addPetals(to: root, count: 5, length: size * 0.44, width: size * 0.18, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.12, color: butter, ink: ink, stroke: stroke)
         case .cherryBlossom:
-            addPetals(to: root, count: 5, length: size * 0.36, width: size * 0.18, color: petal)
-            addCenter(to: root, radius: size * 0.08, color: UIColor(red: 0.86, green: 0.42, blue: 0.5, alpha: 1))
+            addPetals(to: root, count: 5, length: size * 0.42, width: size * 0.2, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.1, color: butter, ink: ink, stroke: stroke)
         case .starfire:
-            addPetals(to: root, count: 12, length: size * 0.4, width: size * 0.08, color: petal)
-            addCenter(to: root, radius: size * 0.12, color: center)
+            addPetals(to: root, count: 12, length: size * 0.46, width: size * 0.1, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.13, color: butter, ink: ink, stroke: stroke)
         case .nightOrchid:
-            addPetals(to: root, count: 5, length: size * 0.42, width: size * 0.14, color: petal)
-            addCenter(to: root, radius: size * 0.09, color: UIColor(red: 0.2, green: 0.12, blue: 0.4, alpha: 1))
+            addPetals(to: root, count: 5, length: size * 0.48, width: size * 0.16, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.11, color: butter, ink: ink, stroke: stroke)
         case .sunburst:
-            addPetals(to: root, count: 16, length: size * 0.38, width: size * 0.07, color: petal)
-            addCenter(to: root, radius: size * 0.13, color: center)
+            addPetals(to: root, count: 16, length: size * 0.44, width: size * 0.09, color: petal, ink: ink, stroke: stroke)
+            addCenter(to: root, radius: size * 0.14, color: butter, ink: ink, stroke: stroke)
         }
         return root
     }
@@ -348,6 +343,8 @@ enum FlowerGlyph {
         length: CGFloat,
         width: CGFloat,
         color: UIColor,
+        ink: UIColor,
+        stroke: CGFloat,
         start: CGFloat = 0,
         span: CGFloat = 2 * .pi
     ) {
@@ -355,19 +352,19 @@ enum FlowerGlyph {
             let angle = start + span * CGFloat(i) / CGFloat(max(count, 1)) - .pi / 2
             let petal = SKShapeNode(ellipseOf: CGSize(width: width, height: length))
             petal.fillColor = color
-            petal.strokeColor = UIColor.white.withAlphaComponent(0.2)
-            petal.lineWidth = 0.4
+            petal.strokeColor = ink
+            petal.lineWidth = stroke
             petal.zRotation = angle
             petal.position = CGPoint(x: sin(angle) * length * 0.28, y: cos(angle) * length * 0.28)
             root.addChild(petal)
         }
     }
 
-    private static func addCenter(to root: SKNode, radius: CGFloat, color: UIColor) {
+    private static func addCenter(to root: SKNode, radius: CGFloat, color: UIColor, ink: UIColor, stroke: CGFloat) {
         let node = SKShapeNode(circleOfRadius: radius)
         node.fillColor = color
-        node.strokeColor = UIColor.white.withAlphaComponent(0.35)
-        node.lineWidth = 0.5
+        node.strokeColor = ink
+        node.lineWidth = stroke
         node.zPosition = 2
         root.addChild(node)
     }

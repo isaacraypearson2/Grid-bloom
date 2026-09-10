@@ -36,6 +36,7 @@ struct GameView: View {
     @State private var showSettings = false
     @State private var showOnboarding: Bool
     @State private var adMessage: String?
+    @State private var matchBloom: MatchBloomFlash?
     var onExit: () -> Void
 
     private var game: GameState { session.game }
@@ -69,6 +70,12 @@ struct GameView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea(edges: .bottom)
                     .allowsHitTesting(!paused && !game.isGameOver && adMessage == nil && !showOnboarding)
+            }
+
+            if let matchBloom {
+                FullScreenMatchBloom(flash: matchBloom, reduced: reduce)
+                    .transition(.opacity)
+                    .zIndex(40)
             }
 
             if showBloomBanner {
@@ -133,6 +140,7 @@ struct GameView: View {
         }
         .animation(reduce ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.78), value: game.isGameOver)
         .animation(reduce ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.78), value: paused)
+        .animation(reduce ? .easeOut(duration: 0.12) : .easeOut(duration: 0.18), value: matchBloom?.id)
         .sheet(isPresented: $showSettings) {
             SettingsView(settings: settings, theme: theme, onClose: { showSettings = false })
         }
@@ -153,6 +161,26 @@ struct GameView: View {
         }
         .onChange(of: settings.colorblindPalette) { _ in
             scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
+        }
+        .onChange(of: game.lastPlace) { result in
+            guard let result, !result.clear.isEmpty || result.didUltraWipe else { return }
+            let species = result.clear.bloomSpecies
+            let variant = result.clear.bloomVariant
+            let custom = profile.customBloom(storage: result.clear.dominantStorage)
+            let flash = MatchBloomFlash(
+                species: custom?.guessedSpecies ?? species,
+                title: result.didUltraWipe
+                    ? "\(custom?.name ?? variant?.title ?? species.title)  GRID"
+                    : (custom?.name ?? variant?.title ?? species.title),
+                tint: Color(custom?.fillColor ?? variant?.petalTint ?? species.petalTint),
+                stamp: custom.flatMap { CustomBloomDisk.stamp(id: $0.id) },
+                combo: result.didUltraWipe ? max(4, result.combo) : max(1, result.combo)
+            )
+            matchBloom = flash
+            let hold = reduce ? 0.35 : 0.9
+            DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+                if matchBloom?.id == flash.id { matchBloom = nil }
+            }
         }
         .onChange(of: game.bloomPulse) { _ in
             bannerCombo = game.lastBloomCombo

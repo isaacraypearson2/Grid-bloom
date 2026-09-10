@@ -37,6 +37,8 @@ struct ContentView: View {
                     gamesPlayed: profile.gamesPlayed,
                     petals: profile.petals,
                     rankTitle: profile.gardenRank.title,
+                    seedPackCount: profile.seedPacks.count,
+                    fertilizerCharges: profile.fertilizerCharges,
                     goals: profile.todayGoals,
                     goalProgress: profile.goalState,
                     onPlayClassic: { route = .play(.classic) },
@@ -46,6 +48,7 @@ struct ContentView: View {
                     onAlbum: { route = .album },
                     onScanFlower: { route = .scanFlower },
                     onGarden: { route = .garden },
+                    onSeedPacks: { route = .garden },
                     onShop: { route = .shop },
                     onSettings: { route = .settings }
                 )
@@ -82,7 +85,7 @@ struct ContentView: View {
                     onClose: { route = .menu }
                 )
             case .scanFlower:
-                FlowerScanView(profile: profile, theme: theme, onClose: { route = .album })
+                FlowerScanView(profile: profile, theme: theme, onClose: { route = .menu })
             case .garden:
                 GardenView(profile: profile, theme: theme, onClose: { route = .menu })
             case .miniGames:

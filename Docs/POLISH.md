@@ -26,11 +26,13 @@ Select any owned skin in **Greenhouse**. Classic play is never gated.
 
 ## Match VFX
 
-Line clears bloom **that flower type across the screen** — a short full-screen petal overlay of the dominant species (or your scanned photo stamp), scaled by combo. Board tiles still sparkle, punch, and float `+score`. The overlay does not steal touches and fades in well under a second so you can keep placing. Reduce Motion is a brief tint only.
+Line clears bloom **the matched species across the whole phone** — HUD included. A SwiftUI wash + ~280pt glyph (or scanned stamp) sits above SpriteView, plus a SpriteKit overlay whose hero is **82–94%** of the shorter scene edge. Combo scales size and wash. Board tiles still sparkle, punch, and float `+score`. Neither overlay steals touches; Reduce Motion is a brief tint only (~0.35s).
+
+Tiles themselves show a **large cream flower glyph** (about 86% of the block) with a dark ink stroke and gold center, so matching reads as flower type + color — not a blank pastel square.
 
 ## Scan a real flower
 
-Album → **Scan**, or the camera button on the menu.
+Home **Scan Flower**, or Album → **Scan**. Close returns to the menu.
 
 - Camera or Photo Library. Permission strings: `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` in `Info.plist`.
 - Classification is **heuristic-first and fully on-device**. A color+shape pass always names the bloom (Blush bloom, Golden bloom, Custom bloom, …). Vision’s built-in `VNClassifyImageRequest` upgrades that name when it recognizes a known species (tulip, rose, orchid, …). There is no cloud plant API.
@@ -48,7 +50,7 @@ Album → **Scan**, or the camera button on the menu.
 
 ## Garden growing loop
 
-Menu → **My garden** (leaf). Six beds. New profiles start with tulip, daisy, and rose seeds.
+Home → **My Garden** (water / fertilizer) or **Seed Packs** (same screen). Fertilizer, unopened packs, and petal shop sit **above** the six beds so they are not below the fold. The column scrolls on small phones. New profiles start with tulip, daisy, and rose seeds.
 
 - Plant a seed; it grows in real time (Common 1 min, Rare 3, Epic 8, Ultra 15).
 - **Water / care** — each plant needs water on a fair timer (about half its grow time, minimum 45s). UI warns **Needs water** (yellow, with time until wilt), then **Wilting — water within …** (orange). Wilted plants pause growth. If still neglected they **die**, leave the bed empty, and have a ~22% chance to salvage a seed. Watering anytime while alive resets the care clock. Legacy plots (pre-watering save) keep remaining grow time and get a fresh water clock so they don’t instantly wilt.
@@ -58,7 +60,7 @@ Menu → **My garden** (leaf). Six beds. New profiles start with tulip, daisy, a
 
 ## Flower maps (species stages)
 
-Menu → **Flower maps**. Classic Garden is always playable. Each species has a named board that unlocks when you **collect** that flower (place it in Classic, harvest it, win its mini-game, buy Lotus, or unlock its map skin).
+Home → **Flower Maps**. Classic Garden is always playable from the big hero button. Each species has a named board that unlocks when you **collect** that flower (place it in Classic, harvest it, win its mini-game, buy Lotus, or unlock its map skin).
 
 | Stage | Backdrop | How to unlock |
 | --- | --- | --- |
@@ -91,7 +93,7 @@ Any **Ultra** variant (Ultra Pink Tulip, Ultra Amber Starfire, …) wipes the re
 
 ## Mini-games
 
-From the menu **Side gardens**:
+Home → **Mini-games** (earn seed packs):
 
 1. **Petal Catch** — tap falling petals, catch 10 in 22s. First win: **Orchid** + Rare pack. Repeats: Common pack.
 2. **Pattern Bloom** — repeat the flashed flowers for 3 rounds. First win: **Peony**, **Glasshouse**, Epic pack. Repeats: Rare pack.
@@ -102,24 +104,28 @@ Winning both games once also grants a single **Ultra** pack. Repeats still pay a
 
 - First-run onboarding (7 short pages, skippable) plus in-game “Drag a flower…” hint.
 - Settings: How to play, haptics, sound, color-distinct pieces, Reduce Motion.
-- Menu shows petals, rank, daily goals, album, **My garden**, **Flower maps**, and side gardens.
+- Home is a **scrollable** screen. Shop / Settings stay as top icons. Destinations in order:
+  1. **Classic Garden** (hero — mixed board, always free)
+  2. **Flower Maps** / **My Garden** / **Seed Packs** / **Mini-games** / **Album** / **Scan Flower** (2-column grid)
+  3. **Today’s Bloom** (UTC daily)
+- **Seed Packs** and **My Garden** both open the garden screen. Pack count + fertilizer charges show on the Seed Packs tile.
 
 ## How to test in Xcode Simulator
 
 1. Open `Gridbloom.xcodeproj` in Xcode 16+ (iOS 16+ iPhone simulator).
 2. **Product → Test (⌘U)** — includes the species × color × rarity catalog, flower-map unlocks, garden watering/wilt/death, fertilizer 2×/24h cooldown, seed-pack rarity, Ultra grid wipe, daily goals, Pattern Bloom, Glasshouse / Desert Bloom unlocks. Ads still use `MockRewardedAdService`.
 3. **Product → Run (⌘R)** on an iPhone simulator.
-4. Skip or finish onboarding. **Play** Classic Garden: pieces should show flower glyphs; clearing a line should flash a **full-screen bloom of that flower type** (bigger with combo), then let you keep playing.
-5. Menu camera or Album → **Scan**. Simulator: use Photo Library (camera is limited; grant Photos if the camera fallback asks). Pick any colorful image. Plant it; it should show in the album. Start Classic Garden — the opening tray can already show that stamp. Today’s Bloom should not deal scanned tiles. A dull/gray photo is named **Custom bloom**.
-6. Menu → **Flower album** (book). Each species shows color rows and C/R/E/U pips. Starters collect as you place them. Buy Lotus if you have 30 petals (play a bit, or complete daily goals).
-7. Menu → **Side gardens** → Petal Catch. Catch 10 petals; album should show Orchid and **My garden** should have a Rare pack. Pattern Bloom: watch, repeat; Glasshouse + Epic pack. Winning **both** should add one Ultra pack (once).
+4. Skip or finish onboarding. Tap **Classic Garden**. Pieces should show a large flower on each colored block. Clearing a line should flash that **species across the whole phone** (HUD included, bigger with combo), then let you keep playing.
+5. Home **Scan Flower** or Album → **Scan**. Simulator: use Photo Library (camera is limited; grant Photos if the camera fallback asks). Pick any colorful image. Plant it; it should show in the album. Start Classic Garden — the opening tray can already show that stamp. Today’s Bloom should not deal scanned tiles. A dull/gray photo is named **Custom bloom**. Close Scan returns to the menu.
+6. Home → **Album**. Each species shows color rows and C/R/E/U pips. Starters collect as you place them. Buy Lotus if you have 30 petals (play a bit, or complete daily goals).
+7. Home → **Mini-games** → Petal Catch. Catch 10 petals; album should show Orchid and **Seed Packs** / **My Garden** should have a Rare pack. Pattern Bloom: watch, repeat; Glasshouse + Epic pack. Winning **both** should add one Ultra pack (once).
 8. Greenhouse: Meadow Clay is free. Glasshouse **Use** after Pattern Bloom. Desert Bloom **40 petals**. Sakura / Night / Sunflower still **Watch to unlock** (DEBUG `forceGoogleTestAds` if AdMob isn’t filling).
 9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads.
 10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this).
 11. Settings → Reduce Motion: full-screen bloom is a brief tint; tiles should not shake / punch / spray petals.
-12. **My garden**: plant a starter seed. **Water** when the bed turns yellow (“Needs water”) — don’t wait for orange wilt. Harvest when ready. Open a seed pack and confirm the rarity banner matches the pack tier.
+12. Home → **My Garden** or **Seed Packs**: fertilizer, packs, and petal shop should sit above the beds. Plant a starter seed. **Water** when the bed turns yellow (“Needs water”) — don’t wait for orange wilt. Harvest when ready. Open a seed pack and confirm the rarity banner matches the pack tier.
 13. Buy a Common pack for 18 petals (play a bit first). **Watch for fertilizer** (optional ad) → apply **Fertilize** on a growing plant: it should show 2× for 2 hours. A second fertilize on that plant should be blocked until 24h. Classic Garden must remain playable with an empty garden / no ads.
 14. Leave a plant unwatered past the wilt warning — it should die, empty the bed, and sometimes return a salvaged seed. Open the Ultra pack (from both mini-games, or 120 petals). Plant, water, harvest that Ultra variant. In **Classic** or a flower map (not Today’s Bloom), complete a line that is mostly that Ultra bloom — the rest of the board should wipe with a GRID bloom.
-15. Place a tulip in Classic, then open **Flower maps** — **Tulip Walk** should unlock and deal only tulips on the meadow board. Today’s Bloom should still ignore extra colors/rarities.
+15. Place a tulip in Classic, then open **Flower Maps** — **Tulip Walk** should unlock and deal only tulips on the meadow board. Today’s Bloom should still ignore extra colors/rarities.
 
 AdMob / StoreKit paths were not removed. `Products.storekit` remains unused by the shop. Restore still imports leftover IAP entitlements.
