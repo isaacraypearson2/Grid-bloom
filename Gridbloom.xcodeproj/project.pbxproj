@@ -136,7 +136,7 @@
 		A10000000000000000000120 /* combo.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = combo.wav; sourceTree = "<group>"; };
 		A10000000000000000000122 /* ui.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ui.wav; sourceTree = "<group>"; };
 		A10000000000000000000124 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		A10000000000000000000126 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		A10000000000000000000126 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.storekit; path = Products.storekit; sourceTree = "<group>"; };
 		A10000000000000000000130 /* FairDealerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairDealerTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000132 /* ContinueAndStreakTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueAndStreakTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000134 /* CosmeticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticsTests.swift; sourceTree = "<group>"; };
