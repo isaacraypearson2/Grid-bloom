@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>NSCameraUsageDescription</key>
+  <string>Gridbloom uses the camera so you can scan a real flower and plant it as a playable tile. Photos stay on this device and are never uploaded.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Gridbloom reads a photo you pick so you can turn a real flower into a playable tile. Photos stay on this device and are never uploaded.</string>
   <key>GADApplicationIdentifier</key>
   <string>ca-app-pub-9109033018957997~7145749382</string>
   <key>SKAdNetworkItems</key>

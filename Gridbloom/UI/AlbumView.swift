@@ -4,6 +4,7 @@ struct AlbumView: View {
     @ObservedObject var profile: PlayerProfile
     @ObservedObject var cosmetics: CosmeticsStore
     var theme: BoardTheme
+    var onScanFlower: () -> Void
     var onClose: () -> Void
     @State private var toast: String?
 
@@ -16,7 +17,7 @@ struct AlbumView: View {
                         Text("Flower album")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("\(profile.collectedFlowers.count)/\(FlowerSpecies.allCases.count) collected  ·  \(profile.gardenRank.title)")
+                        Text("\(profile.collectedFlowers.count)/\(FlowerSpecies.allCases.count) collected  ·  \(profile.customBlooms.count) scanned  ·  \(profile.gardenRank.title)")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -46,6 +47,15 @@ struct AlbumView: View {
                         .background(theme.accent)
                         .clipShape(Capsule())
                     }
+                    Button("Scan") {
+                        onScanFlower()
+                    }
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(GardenPalette.dailyFill)
+                    .clipShape(Capsule())
                 }
                 .padding(12)
                 .background(theme.cream.opacity(0.75))
@@ -59,6 +69,9 @@ struct AlbumView: View {
 
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(profile.customBlooms) { bloom in
+                            customCard(bloom)
+                        }
                         ForEach(FlowerSpecies.allCases) { species in
                             flowerCard(species)
                         }
@@ -97,6 +110,43 @@ struct AlbumView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(status == .collected ? theme.accent.opacity(0.5) : Color.clear, lineWidth: 1.4)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func customCard(_ bloom: CustomBloom) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                if let stamp = CustomBloomDisk.stamp(id: bloom.id) {
+                    Image(uiImage: stamp)
+                        .resizable()
+                        .frame(width: 36, height: 36)
+                } else {
+                    BloomMark(size: 36, petal: Color(bloom.fillColor))
+                }
+                Spacer()
+                Text("Scanned")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+            }
+            Text(bloom.name)
+                .font(.system(.headline, design: .rounded).weight(.bold))
+                .foregroundColor(theme.ink)
+            Text(bloom.identifiedOnDevice ? "Spotted on-device. Plays in Classic Garden." : "Custom bloom from your photo. Plays in Classic Garden.")
+                .font(.system(.caption, design: .rounded))
+                .foregroundColor(theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Remove") {
+                profile.removeCustomBloom(bloom.id)
+            }
+            .font(.system(.caption, design: .rounded).weight(.semibold))
+            .foregroundColor(theme.inkSoft)
+        }
+        .padding(14)
+        .background(theme.cream.opacity(0.95))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(theme.accent.opacity(0.5), lineWidth: 1.4)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }

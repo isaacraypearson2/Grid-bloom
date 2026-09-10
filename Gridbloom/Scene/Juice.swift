@@ -188,7 +188,8 @@ enum Juice {
         fill: UIColor,
         stroke: UIColor,
         theme: CosmeticPack,
-        flower: FlowerSpecies?
+        flower: FlowerSpecies?,
+        stamp: UIImage? = nil
     ) -> SKNode {
         let root = SKNode()
         let corner = size * 0.22
@@ -212,7 +213,14 @@ enum Juice {
         sheen.zPosition = 2
         root.addChild(sheen)
 
-        if let flower {
+        if let stamp {
+            let sprite = SKSpriteNode(
+                texture: SKTexture(image: stamp),
+                size: CGSize(width: size * 0.72, height: size * 0.72)
+            )
+            sprite.zPosition = 3
+            root.addChild(sprite)
+        } else if let flower {
             let glyph = FlowerGlyph.node(species: flower, size: size * 0.62, fill: fill)
             glyph.zPosition = 3
             root.addChild(glyph)
@@ -361,12 +369,22 @@ final class PieceSprite: SKNode {
     private let blockSize: CGFloat
     private let gap: CGFloat
     var theme: BoardTheme
+    var stamp: UIImage?
 
-    init(piece: Piece, blockSize: CGFloat, gap: CGFloat = 2.4, ghost: Bool = false, valid: Bool = true, theme: BoardTheme) {
+    init(
+        piece: Piece,
+        blockSize: CGFloat,
+        gap: CGFloat = 2.4,
+        ghost: Bool = false,
+        valid: Bool = true,
+        theme: BoardTheme,
+        stamp: UIImage? = nil
+    ) {
         self.piece = piece
         self.blockSize = blockSize
         self.gap = gap
         self.theme = theme
+        self.stamp = stamp
         super.init()
         name = "piece-\(piece.id.uuidString)"
         redraw(ghost: ghost, valid: valid)
@@ -401,7 +419,8 @@ final class PieceSprite: SKNode {
                     fill: theme.pieceFill(index: piece.colorIndex),
                     stroke: theme.pieceStroke(index: piece.colorIndex),
                     theme: theme.pack,
-                    flower: piece.flower
+                    flower: piece.flower,
+                    stamp: stamp
                 )
             }
             node.position = CGPoint(

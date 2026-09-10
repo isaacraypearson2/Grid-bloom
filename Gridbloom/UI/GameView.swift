@@ -141,6 +141,7 @@ struct GameView: View {
             // next run-loop turn so @Published updates cannot re-enter ContentView.body.
             game.attachProfile(profile)
             scene.settings = settings
+            scene.syncProfile(profile)
             scene.apply(theme: theme, colorblind: settings.colorblindPalette)
             DispatchQueue.main.async {
                 game.recordSessionStartIfNeeded()

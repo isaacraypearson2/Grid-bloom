@@ -73,6 +73,7 @@ final class GameState: ObservableObject {
             self.dealer = FairDealer(rng: SplitMix64(seed: seed))
         }
         self.dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Set(FlowerSpecies.starters)
+        self.dealer.customBlooms = mode == .classic ? (profile?.customBlooms ?? []) : []
         self.bestScore = self.scoreStore.best(for: mode, utcDay: day)
         if dealOnStart, tray == nil {
             dealTray()
@@ -85,6 +86,18 @@ final class GameState: ObservableObject {
     func attachProfile(_ profile: PlayerProfile) {
         self.profile = profile
         dealer.flowerRoster = profile.playableFlowers(for: mode)
+        dealer.customBlooms = mode == .classic ? profile.customBlooms : []
+        restampOpeningTrayIfNeeded()
+    }
+
+    /// Classic deals the first tray in `init` before SwiftUI can attach the profile.
+    /// Overlay scanned stamps in place (no extra RNG) so they can show immediately.
+    func restampOpeningTrayIfNeeded() {
+        guard mode == .classic, board.occupiedCount == 0, score == 0, !dealer.customBlooms.isEmpty else { return }
+        let next = tray.map { piece in piece.map { dealer.overlayCustom($0) } }
+        let changed = zip(tray, next).contains { $0?.customBloomID != $1?.customBloomID }
+        guard changed else { return }
+        tray = next
     }
 
     /// Call from `onAppear` (after the view is mounted), never from `View.init`.
@@ -185,6 +198,7 @@ final class GameState: ObservableObject {
             dealer = FairDealer(rng: SplitMix64(seed: DailySeed.classicLaunchSeed()))
         }
         dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Set(FlowerSpecies.starters)
+        dealer.customBlooms = mode == .classic ? (profile?.customBlooms ?? []) : []
         bestScore = scoreStore.best(for: mode, utcDay: utcDay)
         dealTray()
         refreshGameOver()

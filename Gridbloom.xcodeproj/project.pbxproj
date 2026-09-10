@@ -67,6 +67,11 @@
 		A10000000000000000000191 /* MiniGamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000190 /* MiniGamesView.swift */; };
 		A10000000000000000000193 /* PatternBloomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000192 /* PatternBloomView.swift */; };
 		A10000000000000000000195 /* FlowerMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000194 /* FlowerMetaTests.swift */; };
+		A10000000000000000000197 /* CustomBloom.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000196 /* CustomBloom.swift */; };
+		A10000000000000000000199 /* FlowerScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000198 /* FlowerScanner.swift */; };
+		A10000000000000000000201 /* BloomOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000200 /* BloomOverlay.swift */; };
+		A10000000000000000000203 /* FlowerScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000202 /* FlowerScanView.swift */; };
+		A10000000000000000000205 /* FlowerScanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000204 /* FlowerScanTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -143,6 +148,11 @@
 		A10000000000000000000190 /* MiniGamesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniGamesView.swift; sourceTree = "<group>"; };
 		A10000000000000000000192 /* PatternBloomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternBloomView.swift; sourceTree = "<group>"; };
 		A10000000000000000000194 /* FlowerMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerMetaTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000196 /* CustomBloom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBloom.swift; sourceTree = "<group>"; };
+		A10000000000000000000198 /* FlowerScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanner.swift; sourceTree = "<group>"; };
+		A10000000000000000000200 /* BloomOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BloomOverlay.swift; sourceTree = "<group>"; };
+		A10000000000000000000202 /* FlowerScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanView.swift; sourceTree = "<group>"; };
+		A10000000000000000000204 /* FlowerScanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -240,6 +250,8 @@
 				A10000000000000000000180 /* FlowerSpecies.swift */,
 				A10000000000000000000182 /* DailyGoals.swift */,
 				A10000000000000000000184 /* MiniGameRules.swift */,
+				A10000000000000000000196 /* CustomBloom.swift */,
+				A10000000000000000000198 /* FlowerScanner.swift */,
 			);
 			path = Game;
 			sourceTree = "<group>";
@@ -250,6 +262,7 @@
 				A10000000000000000000058 /* GameScene.swift */,
 				A10000000000000000000060 /* Juice.swift */,
 				A10000000000000000000186 /* PetalCatchScene.swift */,
+				A10000000000000000000200 /* BloomOverlay.swift */,
 			);
 			path = Scene;
 			sourceTree = "<group>";
@@ -277,6 +290,7 @@
 				A10000000000000000000188 /* AlbumView.swift */,
 				A10000000000000000000190 /* MiniGamesView.swift */,
 				A10000000000000000000192 /* PatternBloomView.swift */,
+				A10000000000000000000202 /* FlowerScanView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -320,6 +334,7 @@
 				A10000000000000000000152 /* GameStabilityTests.swift */,
 				A10000000000000000000165 /* AdConfigTests.swift */,
 				A10000000000000000000194 /* FlowerMetaTests.swift */,
+				A10000000000000000000204 /* FlowerScanTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -473,6 +488,10 @@
 				A10000000000000000000189 /* AlbumView.swift in Sources */,
 				A10000000000000000000191 /* MiniGamesView.swift in Sources */,
 				A10000000000000000000193 /* PatternBloomView.swift in Sources */,
+				A10000000000000000000197 /* CustomBloom.swift in Sources */,
+				A10000000000000000000199 /* FlowerScanner.swift in Sources */,
+				A10000000000000000000201 /* BloomOverlay.swift in Sources */,
+				A10000000000000000000203 /* FlowerScanView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,6 +510,7 @@
 				A10000000000000000000153 /* GameStabilityTests.swift in Sources */,
 				A10000000000000000000166 /* AdConfigTests.swift in Sources */,
 				A10000000000000000000195 /* FlowerMetaTests.swift in Sources */,
+				A10000000000000000000205 /* FlowerScanTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -638,6 +658,8 @@
 				INFOPLIST_FILE = Gridbloom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Gridbloom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gridbloom uses the camera so you can scan a real flower and plant it as a playable tile. Photos stay on this device and are never uploaded.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Gridbloom reads a photo you pick so you can turn a real flower into a playable tile. Photos stay on this device and are never uploaded.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -677,6 +699,8 @@
 				INFOPLIST_FILE = Gridbloom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Gridbloom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gridbloom uses the camera so you can scan a real flower and plant it as a playable tile. Photos stay on this device and are never uploaded.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Gridbloom reads a photo you pick so you can turn a real flower into a playable tile. Photos stay on this device and are never uploaded.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

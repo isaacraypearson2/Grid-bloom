@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 /// Local profile: lifetime stats, UTC daily streak, petals, album, and daily goals.
 final class PlayerProfile: ObservableObject {
@@ -18,6 +19,7 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var goalState: DailyGoalProgress
     @Published private(set) var lastClaimedGoalIDs: [String] = []
     @Published private(set) var lastPetalsAwarded: Int = 0
+    @Published private(set) var customBlooms: [CustomBloom]
 
     private let defaults: UserDefaults
 
@@ -33,6 +35,7 @@ final class PlayerProfile: ObservableObject {
         static let extraFlowers = "gridbloom.profile.extraFlowers"
         static let collected = "gridbloom.profile.collectedFlowers"
         static let goals = "gridbloom.profile.dailyGoals"
+        static let blooms = "gridbloom.profile.customBlooms"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -47,6 +50,12 @@ final class PlayerProfile: ObservableObject {
         lifetimePetals = defaults.integer(forKey: Keys.lifetimePetals)
         extraFlowerIDs = Set(defaults.stringArray(forKey: Keys.extraFlowers) ?? [])
         collectedFlowerIDs = Set(defaults.stringArray(forKey: Keys.collected) ?? [])
+        if let bloomData = defaults.data(forKey: Keys.blooms),
+           let blooms = try? JSONDecoder().decode([CustomBloom].self, from: bloomData) {
+            customBlooms = blooms
+        } else {
+            customBlooms = []
+        }
         if let data = defaults.data(forKey: Keys.goals),
            let decoded = try? JSONDecoder().decode(DailyGoalProgress.self, from: data) {
             goalState = decoded
@@ -81,7 +90,7 @@ final class PlayerProfile: ObservableObject {
     }
 
     var gardenRank: GardenRank {
-        GardenRank.from(collectedCount: collectedFlowers.count)
+        GardenRank.from(collectedCount: collectedFlowers.count + customBlooms.count)
     }
 
     var todayGoals: [DailyGoal] {
@@ -210,6 +219,53 @@ final class PlayerProfile: ObservableObject {
     func recordPetalCatches(_ count: Int) {
         guard count > 0 else { return }
         applyGoalProgress(kind: .petalCatch, value: count, additive: true)
+    }
+
+    func customBloom(storage: Int) -> CustomBloom? {
+        customBlooms.first { $0.storageValue == storage }
+    }
+
+    func customBloom(id: UUID) -> CustomBloom? {
+        customBlooms.first { $0.id == id }
+    }
+
+    @discardableResult
+    func addCustomBloom(name: String, stamp: UIImage, draft: FlowerScanDraft) -> CustomBloom? {
+        var blooms = customBlooms
+        if blooms.count >= CustomBloom.maxCount {
+            let oldest = blooms.removeFirst()
+            CustomBloomDisk.remove(id: oldest.id)
+        }
+        let used = Set(blooms.map(\.slot))
+        let slot = (0..<CustomBloom.maxCount).first { !used.contains($0) } ?? blooms.count
+        let bloom = CustomBloom(
+            id: UUID(),
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Custom bloom" : name,
+            slot: slot,
+            guessedSpeciesRaw: draft.speciesHint?.rawValue,
+            hue: draft.hue,
+            saturation: draft.saturation,
+            brightness: draft.brightness,
+            identifiedOnDevice: draft.usedVision
+        )
+        CustomBloomDisk.save(stamp: stamp, id: bloom.id)
+        blooms.append(bloom)
+        customBlooms = blooms
+        persistCustomBlooms()
+        addPetals(8)
+        return bloom
+    }
+
+    func removeCustomBloom(_ id: UUID) {
+        CustomBloomDisk.remove(id: id)
+        customBlooms.removeAll { $0.id == id }
+        persistCustomBlooms()
+    }
+
+    private func persistCustomBlooms() {
+        if let data = try? JSONEncoder().encode(customBlooms) {
+            defaults.set(data, forKey: Keys.blooms)
+        }
     }
 
     /// Pure streak rules: same day keeps the count; consecutive UTC day increments; a gap resets to 1.

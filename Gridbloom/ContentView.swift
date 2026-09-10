@@ -9,6 +9,7 @@ enum AppRoute: Equatable {
     case miniGames
     case petalCatch
     case patternBloom
+    case scanFlower
 }
 
 struct ContentView: View {
@@ -40,6 +41,7 @@ struct ContentView: View {
                     onPlayDaily: { route = .play(.daily) },
                     onMiniGames: { route = .miniGames },
                     onAlbum: { route = .album },
+                    onScanFlower: { route = .scanFlower },
                     onShop: { route = .shop },
                     onSettings: { route = .settings }
                 )
@@ -58,7 +60,15 @@ struct ContentView: View {
                     onClose: { route = .menu }
                 )
             case .album:
-                AlbumView(profile: profile, cosmetics: cosmetics, theme: theme, onClose: { route = .menu })
+                AlbumView(
+                    profile: profile,
+                    cosmetics: cosmetics,
+                    theme: theme,
+                    onScanFlower: { route = .scanFlower },
+                    onClose: { route = .menu }
+                )
+            case .scanFlower:
+                FlowerScanView(profile: profile, theme: theme, onClose: { route = .album })
             case .miniGames:
                 MiniGamesView(
                     theme: theme,

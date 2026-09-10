@@ -11,6 +11,8 @@ struct FairDealer {
     var openingGraceTrays = 5
     /// Flowers the dealer may stamp onto pieces. Daily Bloom should pass starters only.
     var flowerRoster: Set<FlowerSpecies> = Set(FlowerSpecies.starters)
+    /// Classic-only scanned blooms. Empty for Today’s Bloom so UTC deals stay stable.
+    var customBlooms: [CustomBloom] = []
 
     init(rng: SplitMix64, catalog: [Piece] = PieceCatalog.all) {
         self.rng = rng
@@ -54,7 +56,15 @@ struct FairDealer {
 
     mutating func pickWeighted(occupancy: Double) -> Piece {
         guard !catalog.isEmpty else {
-            return Piece(id: UUID(), catalogID: "empty", cells: [GridPoint(x: 0, y: 0)], colorIndex: 0, flower: .tulip)
+            return Piece(
+                id: UUID(),
+                catalogID: "empty",
+                cells: [GridPoint(x: 0, y: 0)],
+                colorIndex: 0,
+                flower: .tulip,
+                customBloomID: nil,
+                customStorageSlot: nil
+            )
         }
         let weights = catalog.map { weight(for: $0, occupancy: occupancy) }
         let index = weightedIndex(weights: weights)
@@ -95,7 +105,22 @@ struct FairDealer {
     }
 
     private func stamp(_ piece: Piece) -> Piece {
-        piece.spawned(flower: FlowerSpecies.playable(at: piece.colorIndex, unlocked: flowerRoster))
+        let flower = FlowerSpecies.playable(at: piece.colorIndex, unlocked: flowerRoster)
+        return overlayCustom(piece.spawned(flower: flower))
+    }
+
+    /// Applies a scanned stamp from `colorIndex` with no extra RNG.
+    /// Used to restamp an already-dealt opening tray after the profile attaches.
+    func overlayCustom(_ piece: Piece) -> Piece {
+        guard piece.customBloomID == nil, !customBlooms.isEmpty, piece.colorIndex % 3 == 0 else {
+            return piece
+        }
+        let bloom = customBlooms[abs(piece.colorIndex) % customBlooms.count]
+        return piece.spawned(
+            flower: bloom.guessedSpecies ?? piece.flower,
+            customBloomID: bloom.id,
+            customStorageSlot: bloom.slot
+        )
     }
 
     private mutating func weightedIndex(weights: [Double]) -> Int {

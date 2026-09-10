@@ -67,7 +67,9 @@ enum PieceCatalog {
             catalogID: id,
             cells: points,
             colorIndex: color,
-            flower: FlowerSpecies.from(colorIndex: color)
+            flower: FlowerSpecies.from(colorIndex: color),
+            customBloomID: nil,
+            customStorageSlot: nil
         )
     }
 

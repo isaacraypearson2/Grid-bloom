@@ -8,7 +8,8 @@ struct OnboardingView: View {
     private let pages: [(String, String, String)] = [
         ("leaf.fill", "Drag a flower onto the garden", "Tiles snap when the ghost is clear. If it can’t land, it shakes home."),
         ("square.grid.3x3.fill", "Fill a row or a column", "Complete lines bloom away together. Intersections count once."),
-        ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… Petals burst, the board punches."),
+        ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… That flower blooms across the screen."),
+        ("camera.fill", "Scan a real flower", "Snap or pick a photo. We read it on this iPhone and plant it as a playable tile."),
         ("book.fill", "Collect flowers & maps", "Album, daily goals, and side gardens unlock new species and playfield skins. Classic Garden is always free to play.")
     ]
 

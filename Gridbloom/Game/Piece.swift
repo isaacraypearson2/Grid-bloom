@@ -20,8 +20,18 @@ struct Piece: Identifiable, Equatable, Sendable {
     /// Palette slot; flower identity is the primary tile read.
     let colorIndex: Int
     let flower: FlowerSpecies
+    /// Scanned bloom, if this piece is a photo stamp instead of a catalog glyph.
+    let customBloomID: UUID?
+    let customStorageSlot: Int?
 
     var cellCount: Int { cells.count }
+
+    var storageValue: Int {
+        if let customStorageSlot {
+            return CustomBloom.storageBase + customStorageSlot
+        }
+        return flower.rawValue
+    }
 
     var width: Int {
         (cells.map(\.x).max() ?? 0) + 1
@@ -36,13 +46,20 @@ struct Piece: Identifiable, Equatable, Sendable {
     }
 
     /// New instance with a unique id (used when dealing from the catalog).
-    func spawned(id: UUID = UUID(), flower: FlowerSpecies? = nil) -> Piece {
+    func spawned(
+        id: UUID = UUID(),
+        flower: FlowerSpecies? = nil,
+        customBloomID: UUID? = nil,
+        customStorageSlot: Int? = nil
+    ) -> Piece {
         Piece(
             id: id,
             catalogID: catalogID,
             cells: cells,
             colorIndex: colorIndex,
-            flower: flower ?? self.flower
+            flower: flower ?? self.flower,
+            customBloomID: customBloomID ?? self.customBloomID,
+            customStorageSlot: customStorageSlot ?? self.customStorageSlot
         )
     }
 

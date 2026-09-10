@@ -16,6 +16,7 @@ struct MainMenuView: View {
     var onPlayDaily: () -> Void
     var onMiniGames: () -> Void
     var onAlbum: () -> Void
+    var onScanFlower: () -> Void
     var onShop: () -> Void
     var onSettings: () -> Void
 
@@ -26,6 +27,7 @@ struct MainMenuView: View {
                 HStack {
                     IconCircleButton(systemName: "bag", label: "Shop", theme: theme, action: onShop)
                     IconCircleButton(systemName: "book.fill", label: "Album", theme: theme, action: onAlbum)
+                    IconCircleButton(systemName: "camera.fill", label: "Scan a flower", theme: theme, action: onScanFlower)
                     Spacer()
                     IconCircleButton(systemName: "slider.horizontal.3", label: "Settings", theme: theme, action: onSettings)
                 }
