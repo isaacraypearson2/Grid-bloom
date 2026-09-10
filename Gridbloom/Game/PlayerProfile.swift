@@ -25,6 +25,8 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var seedPacks: [OwnedSeedPack]
     @Published private(set) var lastPackReveal: PackReveal?
     @Published private(set) var lastHarvested: FlowerSpecies?
+    @Published private(set) var fertilizerCharges: Int
+    @Published private(set) var lastGardenEvent: GardenEvent?
 
     private let defaults: UserDefaults
 
@@ -46,6 +48,7 @@ final class PlayerProfile: ObservableObject {
         static let packs = "gridbloom.profile.seedPacks"
         static let starterSeeds = "gridbloom.profile.starterSeeds"
         static let ultraMilestone = "gridbloom.profile.ultraMilestone"
+        static let fertilizer = "gridbloom.profile.fertilizerCharges"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -86,6 +89,8 @@ final class PlayerProfile: ObservableObject {
         }
         lastPackReveal = nil
         lastHarvested = nil
+        lastGardenEvent = nil
+        fertilizerCharges = defaults.integer(forKey: Keys.fertilizer)
         if !defaults.bool(forKey: Keys.starterSeeds) {
             defaults.set(true, forKey: Keys.starterSeeds)
             addSeed(.tulip)
@@ -99,6 +104,7 @@ final class PlayerProfile: ObservableObject {
             goalState = DailyGoalProgress(utcDay: DailySeed.utcDayString())
         }
         refreshGoalsIfNeeded(utcDay: DailySeed.utcDayString())
+        tickGarden(now: Date())
     }
 
     var playedDailyToday: Bool {
@@ -374,8 +380,10 @@ final class PlayerProfile: ObservableObject {
             slot: slot,
             speciesRaw: species.rawValue,
             plantedAt: now,
-            finishesAt: now.addingTimeInterval(duration),
-            boosted: false
+            lastWateredAt: now,
+            lastTickAt: now,
+            baseDuration: duration,
+            workRemaining: duration
         )
         gardenPlots.append(plot)
         persistPlots()
@@ -383,12 +391,38 @@ final class PlayerProfile: ObservableObject {
     }
 
     @discardableResult
-    func boostPlot(_ id: UUID, now: Date = Date()) -> Bool {
+    func waterPlot(_ id: UUID, now: Date = Date()) -> Bool {
+        tickGarden(now: now)
         guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return false }
         var plot = gardenPlots[index]
-        guard !plot.isReady(now: now) else { return false }
-        plot.finishesAt = now
-        plot.boosted = true
+        plot.tick(now: now)
+        guard !plot.isDead(now: now) else { return false }
+        plot.lastWateredAt = now
+        gardenPlots[index] = plot
+        persistPlots()
+        return true
+    }
+
+    @discardableResult
+    func grantFertilizerCharge(count: Int = 1) -> Int {
+        guard count > 0 else { return fertilizerCharges }
+        fertilizerCharges = min(SeedGardenRules.fertilizerChargeCap, fertilizerCharges + count)
+        defaults.set(fertilizerCharges, forKey: Keys.fertilizer)
+        return fertilizerCharges
+    }
+
+    @discardableResult
+    func applyFertilizer(_ id: UUID, now: Date = Date()) -> Bool {
+        tickGarden(now: now)
+        guard fertilizerCharges > 0 else { return false }
+        guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return false }
+        var plot = gardenPlots[index]
+        plot.tick(now: now)
+        guard plot.canAcceptFertilizer(now: now) else { return false }
+        fertilizerCharges -= 1
+        defaults.set(fertilizerCharges, forKey: Keys.fertilizer)
+        plot.fertilizerUntil = now.addingTimeInterval(SeedGardenRules.fertilizerDuration)
+        plot.fertilizerAvailableAt = now.addingTimeInterval(SeedGardenRules.fertilizerCooldown)
         gardenPlots[index] = plot
         persistPlots()
         return true
@@ -396,8 +430,10 @@ final class PlayerProfile: ObservableObject {
 
     @discardableResult
     func harvestPlot(_ id: UUID, now: Date = Date()) -> FlowerSpecies? {
+        tickGarden(now: now)
         guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return nil }
-        let plot = gardenPlots[index]
+        var plot = gardenPlots[index]
+        plot.tick(now: now)
         guard plot.isReady(now: now) else { return nil }
         gardenPlots.remove(at: index)
         persistPlots()
@@ -406,6 +442,35 @@ final class PlayerProfile: ObservableObject {
         lastHarvested = species
         addPetals(SeedGardenRules.harvestPetals)
         return species
+    }
+
+    /// Apply elapsed growth, wilt, and deaths. Dead plots empty; low-chance wilted seed salvage.
+    func tickGarden(now: Date = Date()) {
+        var next: [GardenPlot] = []
+        var event: GardenEvent?
+        for var plot in gardenPlots {
+            plot.tick(now: now)
+            if plot.isDead(now: now) {
+                let salvaged = SeedGardenRules.salvagesSeed(plotID: plot.id)
+                if salvaged {
+                    addSeed(plot.species)
+                }
+                event = .died(species: plot.species, salvaged: salvaged)
+                continue
+            }
+            next.append(plot)
+        }
+        if next != gardenPlots {
+            gardenPlots = next
+            persistPlots()
+        }
+        if let event {
+            lastGardenEvent = event
+        }
+    }
+
+    func clearGardenEvent() {
+        lastGardenEvent = nil
     }
 
     private func consumeSeed(_ species: FlowerSpecies) -> Bool {

@@ -53,7 +53,7 @@ enum SeedRarity: String, Codable, CaseIterable, Identifiable, Comparable, Sendab
         }
     }
 
-    /// Real-time grow duration. Ads can skip the rest of a plot; Classic Garden never waits on this.
+    /// Real-time grow duration. Fertilizer can double the rate for 2 hours; Classic Garden never waits on this.
     var growDuration: TimeInterval {
         switch self {
         case .common: return 60
@@ -103,26 +103,211 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
     var slot: Int
     var speciesRaw: Int
     var plantedAt: Date
-    var finishesAt: Date
-    var boosted: Bool
+    var lastWateredAt: Date
+    var lastTickAt: Date
+    var baseDuration: TimeInterval
+    var workRemaining: TimeInterval
+    /// 2× growth until this instant.
+    var fertilizerUntil: Date?
+    /// Next time this plot may accept fertilizer (24h cooldown).
+    var fertilizerAvailableAt: Date?
 
     var species: FlowerSpecies {
         FlowerSpecies(rawValue: speciesRaw) ?? .tulip
     }
 
-    func isReady(now: Date = Date()) -> Bool {
-        now >= finishesAt
+    var rarity: SeedRarity { species.rarity }
+
+    func thirstyAt() -> Date {
+        lastWateredAt.addingTimeInterval(SeedGardenRules.waterEvery(for: rarity))
     }
 
-    func progress(now: Date = Date()) -> Double {
-        let total = finishesAt.timeIntervalSince(plantedAt)
-        guard total > 0 else { return 1 }
-        return min(1, max(0, now.timeIntervalSince(plantedAt) / total))
+    func wiltAt() -> Date {
+        thirstyAt().addingTimeInterval(SeedGardenRules.thirstyGrace(for: rarity))
     }
 
-    func remaining(now: Date = Date()) -> TimeInterval {
-        max(0, finishesAt.timeIntervalSince(now))
+    func deathAt() -> Date {
+        wiltAt().addingTimeInterval(SeedGardenRules.wiltGrace(for: rarity))
     }
+
+    func isDead(now: Date) -> Bool {
+        now >= deathAt()
+    }
+
+    func isReady(now: Date) -> Bool {
+        !isDead(now: now) && workRemaining <= 0.01
+    }
+
+    func careStage(now: Date) -> GardenCareStage {
+        if isDead(now: now) { return .dead }
+        if isReady(now: now) {
+            if now >= wiltAt() { return .wilted }
+            if now >= thirstyAt() { return .thirsty }
+            return .ready
+        }
+        if now >= wiltAt() { return .wilted }
+        if now >= thirstyAt() { return .thirsty }
+        return .growing
+    }
+
+    func isFertilizerActive(now: Date) -> Bool {
+        guard let until = fertilizerUntil else { return false }
+        return now < until
+    }
+
+    func canAcceptFertilizer(now: Date) -> Bool {
+        guard !isDead(now: now), workRemaining > 0.01 else { return false }
+        if now >= wiltAt() { return false }
+        if let available = fertilizerAvailableAt, now < available { return false }
+        return true
+    }
+
+    func fertilizerCooldownRemaining(now: Date) -> TimeInterval {
+        guard let available = fertilizerAvailableAt else { return 0 }
+        return max(0, available.timeIntervalSince(now))
+    }
+
+    func growthRate(at date: Date) -> Double {
+        if date >= deathAt() { return 0 }
+        if date >= wiltAt() { return 0 }
+        var rate = 1.0
+        if date >= thirstyAt() { rate *= 0.5 }
+        if let until = fertilizerUntil, date < until { rate *= 2 }
+        return rate
+    }
+
+    mutating func tick(now: Date) {
+        guard now > lastTickAt else { return }
+        var cursor = lastTickAt
+        while cursor < now {
+            if cursor >= deathAt() {
+                workRemaining = max(workRemaining, 0)
+                break
+            }
+            let next = min(now, nextRateChange(after: cursor) ?? now)
+            let dt = next.timeIntervalSince(cursor)
+            if dt <= 0 { break }
+            let rate = growthRate(at: cursor)
+            workRemaining = max(0, workRemaining - dt * rate)
+            cursor = next
+        }
+        lastTickAt = now
+    }
+
+    func progress(now: Date) -> Double {
+        guard baseDuration > 0 else { return 1 }
+        return min(1, max(0, 1 - workRemaining / baseDuration))
+    }
+
+    func remaining(now: Date) -> TimeInterval {
+        let rate = growthRate(at: now)
+        if rate <= 0 { return workRemaining }
+        return max(0, workRemaining / rate)
+    }
+
+    func warningCopy(now: Date) -> String? {
+        switch careStage(now: now) {
+        case .thirsty:
+            let untilWilt = max(0, wiltAt().timeIntervalSince(now))
+            return isReady(now: now)
+                ? "Needs water — harvest soon"
+                : "Needs water (\(SeedGardenRules.formatRemaining(untilWilt)) to wilt)"
+        case .wilted:
+            let untilDeath = max(0, deathAt().timeIntervalSince(now))
+            return isReady(now: now)
+                ? "Wilting — harvest or water to save"
+                : "Wilting — water within \(SeedGardenRules.formatRemaining(untilDeath))"
+        case .dead:
+            return "This bloom didn’t make it"
+        case .growing, .ready:
+            return nil
+        }
+    }
+
+    private func nextRateChange(after date: Date) -> Date? {
+        var marks: [Date] = [thirstyAt(), wiltAt(), deathAt()]
+        if let until = fertilizerUntil { marks.append(until) }
+        return marks.filter { $0 > date }.min()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, slot, speciesRaw, plantedAt, lastWateredAt, lastTickAt
+        case baseDuration, workRemaining, fertilizerUntil, fertilizerAvailableAt
+        case finishesAt, boosted
+    }
+
+    init(
+        id: UUID,
+        slot: Int,
+        speciesRaw: Int,
+        plantedAt: Date,
+        lastWateredAt: Date,
+        lastTickAt: Date,
+        baseDuration: TimeInterval,
+        workRemaining: TimeInterval,
+        fertilizerUntil: Date? = nil,
+        fertilizerAvailableAt: Date? = nil
+    ) {
+        self.id = id
+        self.slot = slot
+        self.speciesRaw = speciesRaw
+        self.plantedAt = plantedAt
+        self.lastWateredAt = lastWateredAt
+        self.lastTickAt = lastTickAt
+        self.baseDuration = baseDuration
+        self.workRemaining = workRemaining
+        self.fertilizerUntil = fertilizerUntil
+        self.fertilizerAvailableAt = fertilizerAvailableAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        slot = try c.decode(Int.self, forKey: .slot)
+        speciesRaw = try c.decode(Int.self, forKey: .speciesRaw)
+        plantedAt = try c.decode(Date.self, forKey: .plantedAt)
+        let decodedNow = Date()
+        // Legacy plots had no care clock. Reset watering at load so they don't instantly wilt.
+        lastWateredAt = try c.decodeIfPresent(Date.self, forKey: .lastWateredAt) ?? decodedNow
+        lastTickAt = try c.decodeIfPresent(Date.self, forKey: .lastTickAt) ?? decodedNow
+        let species = FlowerSpecies(rawValue: speciesRaw) ?? .tulip
+        let fallbackDuration = species.rarity.growDuration
+        baseDuration = try c.decodeIfPresent(TimeInterval.self, forKey: .baseDuration) ?? fallbackDuration
+        if let remaining = try c.decodeIfPresent(TimeInterval.self, forKey: .workRemaining) {
+            workRemaining = remaining
+        } else if let finishes = try c.decodeIfPresent(Date.self, forKey: .finishesAt) {
+            workRemaining = max(0, finishes.timeIntervalSince(decodedNow))
+        } else {
+            workRemaining = fallbackDuration
+        }
+        fertilizerUntil = try c.decodeIfPresent(Date.self, forKey: .fertilizerUntil)
+        fertilizerAvailableAt = try c.decodeIfPresent(Date.self, forKey: .fertilizerAvailableAt)
+        if (try c.decodeIfPresent(Bool.self, forKey: .boosted)) == true {
+            workRemaining = 0
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(slot, forKey: .slot)
+        try c.encode(speciesRaw, forKey: .speciesRaw)
+        try c.encode(plantedAt, forKey: .plantedAt)
+        try c.encode(lastWateredAt, forKey: .lastWateredAt)
+        try c.encode(lastTickAt, forKey: .lastTickAt)
+        try c.encode(baseDuration, forKey: .baseDuration)
+        try c.encode(workRemaining, forKey: .workRemaining)
+        try c.encodeIfPresent(fertilizerUntil, forKey: .fertilizerUntil)
+        try c.encodeIfPresent(fertilizerAvailableAt, forKey: .fertilizerAvailableAt)
+    }
+}
+
+enum GardenCareStage: String, Equatable, Sendable {
+    case growing
+    case thirsty
+    case wilted
+    case ready
+    case dead
 }
 
 struct PackReveal: Equatable {
@@ -130,9 +315,37 @@ struct PackReveal: Equatable {
     var seeds: [FlowerSpecies]
 }
 
+enum GardenEvent: Equatable {
+    case died(species: FlowerSpecies, salvaged: Bool)
+}
+
 enum SeedGardenRules {
     static let plotCount = 6
     static let harvestPetals = 4
+    static let fertilizerDuration: TimeInterval = 2 * 60 * 60
+    static let fertilizerCooldown: TimeInterval = 24 * 60 * 60
+    static let fertilizerChargeCap = 5
+    static let salvageChance = 0.22
+
+    static func waterEvery(for rarity: SeedRarity) -> TimeInterval {
+        max(45, rarity.growDuration * 0.5)
+    }
+
+    /// Yellow warning window after water is due, before wilt.
+    static func thirstyGrace(for rarity: SeedRarity) -> TimeInterval {
+        max(20, rarity.growDuration * 0.25)
+    }
+
+    /// Orange wilt window; water still saves. After this the plot dies.
+    static func wiltGrace(for rarity: SeedRarity) -> TimeInterval {
+        max(30, rarity.growDuration * 0.35)
+    }
+
+    static func salvagesSeed(plotID: UUID) -> Bool {
+        let hash = DailySeed.fnv1a64(plotID.uuidString + "|salvage")
+        let unit = Double(hash % 1000) / 1000.0
+        return unit < salvageChance
+    }
 
     static func pool(for rarity: SeedRarity) -> [FlowerSpecies] {
         FlowerSpecies.allCases.filter { $0.rarity == rarity }

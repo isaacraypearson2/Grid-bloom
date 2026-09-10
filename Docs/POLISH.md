@@ -41,16 +41,17 @@ Album → **Scan**, or the camera button on the menu.
 - **Daily goals** — three UTC-stable chores (lines / combo / score / petal catch). Auto-claim, once per goal.
 - **Streak** — unchanged Today’s Bloom UTC streak.
 - **Album** — collect species. Rank: Sprout → Gardener → Bloomkeeper → Master florist.
-- Rewarded **Bloom revive**, **New tray**, and Greenhouse **Watch to unlock** are unchanged and still player-initiated. Optional **Watch to bloom** on a growing plot uses the same rewarded unit and is never required to play Classic Garden.
+- Rewarded **Bloom revive**, **New tray**, and Greenhouse **Watch to unlock** are unchanged and still player-initiated. Optional **Watch for fertilizer** uses the same rewarded unit, grants a charge you apply to a plant, and is never required to play Classic Garden.
 
 ## Garden growing loop
 
 Menu → **My garden** (leaf). Six beds. New profiles start with tulip, daisy, and rose seeds.
 
 - Plant a seed; it grows in real time (Common 1 min, Rare 3, Epic 8, Ultra 15).
-- **Watch to bloom** finishes that plot immediately (player-initiated rewarded ad). You can always wait instead.
-- Harvest unlocks that species for Classic Garden tiles and pays a few petals.
-- Unlocks persist on `PlayerProfile` (plots, seed inventory, unopened packs).
+- **Water / care** — each plant needs water on a fair timer (about half its grow time, minimum 45s). UI warns **Needs water** (yellow, with time until wilt), then **Wilting — water within …** (orange). Wilted plants pause growth. If still neglected they **die**, leave the bed empty, and have a ~22% chance to salvage a seed. Watering anytime while alive resets the care clock. Legacy plots (pre-watering save) keep remaining grow time and get a fresh water clock so they don’t instantly wilt.
+- **Fertilizer (ads)** — watching a rewarded ad adds a **fertilizer charge** (cap 5). Apply it to a growing plant: **2× growth for 2 hours**, not an instant skip. Each plant can accept fertilizer **at most once every 24 hours**. Cooldown and boost end times persist on the plot in `PlayerProfile`.
+- Harvest (when ready, even if thirsty/wilted) unlocks that species for Classic Garden tiles and pays a few petals.
+- Unlocks persist on `PlayerProfile` (plots, seed inventory, unopened packs, fertilizer charges).
 
 ## Seed packs
 
@@ -85,7 +86,7 @@ Winning both games once also grants a single **Ultra** pack. Repeats still pay a
 ## How to test in Xcode Simulator
 
 1. Open `Gridbloom.xcodeproj` in Xcode 16+ (iOS 16+ iPhone simulator).
-2. **Product → Test (⌘U)** — includes flower roster, garden growth/harvest, seed-pack rarity, Ultra grid wipe, daily goals, Pattern Bloom, Glasshouse / Desert Bloom unlocks. Ads still use `MockRewardedAdService`.
+2. **Product → Test (⌘U)** — includes flower roster, garden watering/wilt/death, fertilizer 2×/24h cooldown, seed-pack rarity, Ultra grid wipe, daily goals, Pattern Bloom, Glasshouse / Desert Bloom unlocks. Ads still use `MockRewardedAdService`.
 3. **Product → Run (⌘R)** on an iPhone simulator.
 4. Skip or finish onboarding. **Play** Classic Garden: pieces should show flower glyphs; clearing a line should flash a **full-screen bloom of that flower type** (bigger with combo), then let you keep playing.
 5. Menu camera or Album → **Scan**. Simulator: use Photo Library (camera is limited; grant Photos if the camera fallback asks). Pick any colorful image. Plant it; it should show in the album. Start Classic Garden — the opening tray can already show that stamp. Today’s Bloom should not deal scanned tiles. A dull/gray photo is named **Custom bloom**.
@@ -95,8 +96,8 @@ Winning both games once also grants a single **Ultra** pack. Repeats still pay a
 9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads.
 10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this).
 11. Settings → Reduce Motion: full-screen bloom is a brief tint; tiles should not shake / punch / spray petals.
-12. **My garden**: plant a starter seed. Either wait ~60s or tap **Watch to bloom** (optional ad). **Harvest** — that flower is collected. Open a seed pack and confirm the rarity banner and seed names match the pack tier.
-13. Buy a Common pack for 18 petals (play a bit first). Classic Garden must remain playable with an empty garden / no ads.
-14. Open the Ultra pack (from both mini-games, or 120 petals). Plant, boost/harvest Starfire (or Night orchid / Sunburst). In **Classic** only, complete a line that is mostly that Ultra flower — the rest of the board should wipe with a GRID bloom. Today’s Bloom should not deal Ultras or wipe.
+12. **My garden**: plant a starter seed. **Water** when the bed turns yellow (“Needs water”) — don’t wait for orange wilt. Harvest when ready. Open a seed pack and confirm the rarity banner matches the pack tier.
+13. Buy a Common pack for 18 petals (play a bit first). **Watch for fertilizer** (optional ad) → apply **Fertilize** on a growing plant: it should show 2× for 2 hours. A second fertilize on that plant should be blocked until 24h. Classic Garden must remain playable with an empty garden / no ads.
+14. Leave a plant unwatered past the wilt warning — it should die, empty the bed, and sometimes return a salvaged seed. Open the Ultra pack (from both mini-games, or 120 petals). Plant, water, harvest Starfire (or Night orchid / Sunburst). In **Classic** only, complete a line that is mostly that Ultra flower — the rest of the board should wipe with a GRID bloom. Today’s Bloom should not deal Ultras or wipe.
 
 AdMob / StoreKit paths were not removed. `Products.storekit` remains unused by the shop. Restore still imports leftover IAP entitlements.

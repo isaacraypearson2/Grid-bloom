@@ -119,6 +119,7 @@ struct ContentView: View {
             profile.refreshGoalsIfNeeded()
             profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
             _ = profile.grantMilestoneUltraIfEligible()
+            profile.tickGarden()
         }
     }
 
