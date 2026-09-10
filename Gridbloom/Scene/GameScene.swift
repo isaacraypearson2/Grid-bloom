@@ -292,7 +292,7 @@ final class GameScene: SKScene {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let drag, let touch = touches.first else { return }
+        guard drag != nil, let touch = touches.first else { return }
         moveDrag(to: touch.location(in: self))
     }
 
