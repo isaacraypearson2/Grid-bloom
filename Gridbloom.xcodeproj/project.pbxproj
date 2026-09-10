@@ -59,6 +59,25 @@
 		A10000000000000000000163 /* AdMobRewardedAdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000162 /* AdMobRewardedAdService.swift */; };
 		A10000000000000000000166 /* AdConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000165 /* AdConfigTests.swift */; };
 		A10000000000000000000171 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000172 /* GoogleMobileAds */; };
+		A10000000000000000000181 /* FlowerSpecies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000180 /* FlowerSpecies.swift */; };
+		A10000000000000000000183 /* DailyGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000182 /* DailyGoals.swift */; };
+		A10000000000000000000185 /* MiniGameRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000184 /* MiniGameRules.swift */; };
+		A10000000000000000000187 /* PetalCatchScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000186 /* PetalCatchScene.swift */; };
+		A10000000000000000000189 /* AlbumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000188 /* AlbumView.swift */; };
+		A10000000000000000000191 /* MiniGamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000190 /* MiniGamesView.swift */; };
+		A10000000000000000000193 /* PatternBloomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000192 /* PatternBloomView.swift */; };
+		A10000000000000000000195 /* FlowerMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000194 /* FlowerMetaTests.swift */; };
+		A10000000000000000000197 /* CustomBloom.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000196 /* CustomBloom.swift */; };
+		A10000000000000000000199 /* FlowerScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000198 /* FlowerScanner.swift */; };
+		A10000000000000000000201 /* BloomOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000200 /* BloomOverlay.swift */; };
+		A10000000000000000000203 /* FlowerScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000202 /* FlowerScanView.swift */; };
+		A10000000000000000000205 /* FlowerScanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000204 /* FlowerScanTests.swift */; };
+		A10000000000000000000207 /* SeedGarden.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000206 /* SeedGarden.swift */; };
+		A10000000000000000000209 /* GardenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000208 /* GardenView.swift */; };
+		A10000000000000000000211 /* GardenLoopTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000210 /* GardenLoopTests.swift */; };
+		A10000000000000000000221 /* BloomCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000220 /* BloomCatalog.swift */; };
+		A10000000000000000000223 /* StagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000222 /* StagesView.swift */; };
+		A10000000000000000000225 /* BloomCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000224 /* BloomCatalogTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +146,25 @@
 		A10000000000000000000162 /* AdMobRewardedAdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobRewardedAdService.swift; sourceTree = "<group>"; };
 		A10000000000000000000164 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000165 /* AdConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdConfigTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000180 /* FlowerSpecies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSpecies.swift; sourceTree = "<group>"; };
+		A10000000000000000000182 /* DailyGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyGoals.swift; sourceTree = "<group>"; };
+		A10000000000000000000184 /* MiniGameRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniGameRules.swift; sourceTree = "<group>"; };
+		A10000000000000000000186 /* PetalCatchScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetalCatchScene.swift; sourceTree = "<group>"; };
+		A10000000000000000000188 /* AlbumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumView.swift; sourceTree = "<group>"; };
+		A10000000000000000000190 /* MiniGamesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniGamesView.swift; sourceTree = "<group>"; };
+		A10000000000000000000192 /* PatternBloomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternBloomView.swift; sourceTree = "<group>"; };
+		A10000000000000000000194 /* FlowerMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerMetaTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000196 /* CustomBloom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBloom.swift; sourceTree = "<group>"; };
+		A10000000000000000000198 /* FlowerScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanner.swift; sourceTree = "<group>"; };
+		A10000000000000000000200 /* BloomOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BloomOverlay.swift; sourceTree = "<group>"; };
+		A10000000000000000000202 /* FlowerScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanView.swift; sourceTree = "<group>"; };
+		A10000000000000000000204 /* FlowerScanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerScanTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000206 /* SeedGarden.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedGarden.swift; sourceTree = "<group>"; };
+		A10000000000000000000208 /* GardenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenView.swift; sourceTree = "<group>"; };
+		A10000000000000000000210 /* GardenLoopTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenLoopTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000220 /* BloomCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BloomCatalog.swift; sourceTree = "<group>"; };
+		A10000000000000000000222 /* StagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagesView.swift; sourceTree = "<group>"; };
+		A10000000000000000000224 /* BloomCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BloomCatalogTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -221,6 +259,13 @@
 				A10000000000000000000054 /* ScoreStore.swift */,
 				A10000000000000000000056 /* GameState.swift */,
 				A10000000000000000000102 /* PlayerProfile.swift */,
+				A10000000000000000000180 /* FlowerSpecies.swift */,
+				A10000000000000000000220 /* BloomCatalog.swift */,
+				A10000000000000000000182 /* DailyGoals.swift */,
+				A10000000000000000000184 /* MiniGameRules.swift */,
+				A10000000000000000000196 /* CustomBloom.swift */,
+				A10000000000000000000198 /* FlowerScanner.swift */,
+				A10000000000000000000206 /* SeedGarden.swift */,
 			);
 			path = Game;
 			sourceTree = "<group>";
@@ -230,6 +275,8 @@
 			children = (
 				A10000000000000000000058 /* GameScene.swift */,
 				A10000000000000000000060 /* Juice.swift */,
+				A10000000000000000000186 /* PetalCatchScene.swift */,
+				A10000000000000000000200 /* BloomOverlay.swift */,
 			);
 			path = Scene;
 			sourceTree = "<group>";
@@ -254,6 +301,12 @@
 				A10000000000000000000114 /* SettingsView.swift */,
 				A10000000000000000000116 /* ShopView.swift */,
 				A10000000000000000000118 /* OnboardingView.swift */,
+				A10000000000000000000188 /* AlbumView.swift */,
+				A10000000000000000000222 /* StagesView.swift */,
+				A10000000000000000000190 /* MiniGamesView.swift */,
+				A10000000000000000000192 /* PatternBloomView.swift */,
+				A10000000000000000000202 /* FlowerScanView.swift */,
+				A10000000000000000000208 /* GardenView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -296,6 +349,10 @@
 				A10000000000000000000150 /* GameLayoutTests.swift */,
 				A10000000000000000000152 /* GameStabilityTests.swift */,
 				A10000000000000000000165 /* AdConfigTests.swift */,
+				A10000000000000000000194 /* FlowerMetaTests.swift */,
+				A10000000000000000000204 /* FlowerScanTests.swift */,
+				A10000000000000000000210 /* GardenLoopTests.swift */,
+				A10000000000000000000224 /* BloomCatalogTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -442,6 +499,21 @@
 				A10000000000000000000115 /* SettingsView.swift in Sources */,
 				A10000000000000000000117 /* ShopView.swift in Sources */,
 				A10000000000000000000119 /* OnboardingView.swift in Sources */,
+				A10000000000000000000181 /* FlowerSpecies.swift in Sources */,
+				A10000000000000000000183 /* DailyGoals.swift in Sources */,
+				A10000000000000000000185 /* MiniGameRules.swift in Sources */,
+				A10000000000000000000187 /* PetalCatchScene.swift in Sources */,
+				A10000000000000000000189 /* AlbumView.swift in Sources */,
+				A10000000000000000000191 /* MiniGamesView.swift in Sources */,
+				A10000000000000000000193 /* PatternBloomView.swift in Sources */,
+				A10000000000000000000197 /* CustomBloom.swift in Sources */,
+				A10000000000000000000199 /* FlowerScanner.swift in Sources */,
+				A10000000000000000000201 /* BloomOverlay.swift in Sources */,
+				A10000000000000000000203 /* FlowerScanView.swift in Sources */,
+				A10000000000000000000207 /* SeedGarden.swift in Sources */,
+				A10000000000000000000209 /* GardenView.swift in Sources */,
+				A10000000000000000000221 /* BloomCatalog.swift in Sources */,
+				A10000000000000000000223 /* StagesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -459,6 +531,10 @@
 				A10000000000000000000151 /* GameLayoutTests.swift in Sources */,
 				A10000000000000000000153 /* GameStabilityTests.swift in Sources */,
 				A10000000000000000000166 /* AdConfigTests.swift in Sources */,
+				A10000000000000000000195 /* FlowerMetaTests.swift in Sources */,
+				A10000000000000000000205 /* FlowerScanTests.swift in Sources */,
+				A10000000000000000000211 /* GardenLoopTests.swift in Sources */,
+				A10000000000000000000225 /* BloomCatalogTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -606,6 +682,8 @@
 				INFOPLIST_FILE = Gridbloom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Gridbloom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gridbloom uses the camera so you can scan a real flower and plant it as a playable tile. Photos stay on this device and are never uploaded.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Gridbloom reads a photo you pick so you can turn a real flower into a playable tile. Photos stay on this device and are never uploaded.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -645,6 +723,8 @@
 				INFOPLIST_FILE = Gridbloom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Gridbloom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gridbloom uses the camera so you can scan a real flower and plant it as a playable tile. Photos stay on this device and are never uploaded.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Gridbloom reads a photo you pick so you can turn a real flower into a playable tile. Photos stay on this device and are never uploaded.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

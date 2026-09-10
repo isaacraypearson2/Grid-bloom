@@ -4,19 +4,29 @@ struct ClearResult: Equatable, Sendable {
     var rows: [Int]
     var columns: [Int]
     var clearedCells: [GridPoint]
+    /// Most common storage value among cleared cells (species raw or custom slot).
+    var dominantStorage: Int
 
     var lineCount: Int { rows.count + columns.count }
     var cellsCleared: Int { clearedCells.count }
     var isEmpty: Bool { lineCount == 0 }
 
-    static let empty = ClearResult(rows: [], columns: [], clearedCells: [])
+    var bloomSpecies: FlowerSpecies {
+        bloomVariant?.species ?? .tulip
+    }
+
+    var bloomVariant: BloomVariant? {
+        BloomCatalog.variant(fromStorage: dominantStorage)
+    }
+
+    static let empty = ClearResult(rows: [], columns: [], clearedCells: [], dominantStorage: 0)
 }
 
 /// Occupancy grid for the 8×8 puzzle. Row 0 is the top of the board.
 struct Board: Equatable, Sendable {
     static let size = 8
 
-    /// `cells[row][column]`. `0` is empty; positive values are piece color indexes + 1.
+    /// `cells[row][column]`. `0` is empty; `1...12` are catalog flowers; `100+` are scanned blooms.
     private(set) var cells: [[Int]]
 
     init(filled: [[Int]]? = nil) {
@@ -95,7 +105,7 @@ struct Board: Equatable, Sendable {
 
     mutating func place(_ piece: Piece, at origin: GridPoint) {
         guard canPlace(piece, at: origin) else { return }
-        let value = piece.colorIndex + 1
+        let value = piece.storageValue
         for point in piece.occupying(at: origin) where isInBounds(point) {
             cells[point.y][point.x] = value
         }
@@ -114,25 +124,32 @@ struct Board: Equatable, Sendable {
 
         var cleared: [GridPoint] = []
         var seen = Set<GridPoint>()
+        var tallies: [Int: Int] = [:]
+        func consume(_ point: GridPoint) {
+            if seen.insert(point).inserted {
+                cleared.append(point)
+                let value = cells[point.y][point.x]
+                if value != 0 {
+                    tallies[value, default: 0] += 1
+                }
+            }
+            cells[point.y][point.x] = 0
+        }
         for y in rows {
             for x in 0..<Board.size {
-                let point = GridPoint(x: x, y: y)
-                if seen.insert(point).inserted {
-                    cleared.append(point)
-                }
-                cells[y][x] = 0
+                consume(GridPoint(x: x, y: y))
             }
         }
         for x in columns {
             for y in 0..<Board.size {
-                let point = GridPoint(x: x, y: y)
-                if seen.insert(point).inserted {
-                    cleared.append(point)
-                }
-                cells[y][x] = 0
+                consume(GridPoint(x: x, y: y))
             }
         }
-        return ClearResult(rows: rows, columns: columns, clearedCells: cleared)
+        let dominant = tallies.max(by: { lhs, rhs in
+            if lhs.value == rhs.value { return lhs.key < rhs.key }
+            return lhs.value < rhs.value
+        })?.key ?? 0
+        return ClearResult(rows: rows, columns: columns, clearedCells: cleared, dominantStorage: dominant)
     }
 
     mutating func clearCells(_ points: [GridPoint]) {

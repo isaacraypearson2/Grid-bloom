@@ -6,37 +6,59 @@ enum CosmeticPack: String, CaseIterable, Identifiable, Equatable {
     case sakura
     case moonlight
     case sunflower
+    case greenhouse
+    case desertBloom
 
     var id: String { rawValue }
 
+    /// StoreKit / ad entitlement. Nil packs unlock through play or petals instead.
     var productID: String? {
         switch self {
-        case .garden: return nil
+        case .garden, .greenhouse, .desertBloom: return nil
         case .sakura: return "com.gridbloom.cosmetics.sakura"
         case .moonlight: return "com.gridbloom.cosmetics.moonlight"
         case .sunflower: return "com.gridbloom.cosmetics.sunflower"
         }
     }
 
+    /// Local unlock key. Ad packs keep their product IDs so existing saves still match.
+    var entitlementKey: String {
+        productID ?? "com.gridbloom.map.\(rawValue)"
+    }
+
     var title: String {
         switch self {
-        case .garden: return "Garden Clay"
-        case .sakura: return "Sakura Petals"
-        case .moonlight: return "Moonlight Garden"
+        case .garden: return "Meadow Clay"
+        case .sakura: return "Sakura Grove"
+        case .moonlight: return "Night Garden"
         case .sunflower: return "Golden Sunflower"
+        case .greenhouse: return "Glasshouse"
+        case .desertBloom: return "Desert Bloom"
         }
     }
 
     var blurb: String {
         switch self {
-        case .garden: return "Soft celadon tiles. Always yours."
+        case .garden: return "Soft celadon meadow. Always yours."
         case .sakura: return "Blush glaze and cherry petal bursts."
-        case .moonlight: return "Cool porcelain under a night garden."
+        case .moonlight: return "Cool porcelain under moonlight."
         case .sunflower: return "Warm honey tiles and golden petals."
+        case .greenhouse: return "Misty glass panes. Unlock in Pattern Bloom."
+        case .desertBloom: return "Sand, terracotta, cactus light. 40 petals."
         }
     }
 
     var isFree: Bool { self == .garden }
+
+    var isAdUnlock: Bool { productID != nil }
+
+    var petalCost: Int? {
+        self == .desertBloom ? 40 : nil
+    }
+
+    var miniGameUnlock: MiniGameKind? {
+        self == .greenhouse ? .patternBloom : nil
+    }
 }
 
 struct BoardTheme {
@@ -155,6 +177,60 @@ struct BoardTheme {
                 petal: UIColor(red: 0.96, green: 0.78, blue: 0.28, alpha: 1),
                 validGhost: UIColor(red: 0.28, green: 0.58, blue: 0.48, alpha: 0.55),
                 invalidGhost: UIColor(red: 0.55, green: 0.32, blue: 0.16, alpha: 0.55)
+            )
+        case .greenhouse:
+            base = BoardTheme(
+                pack: pack,
+                backgroundTop: Color(red: 0.90, green: 0.96, blue: 0.93),
+                backgroundBottom: Color(red: 0.68, green: 0.82, blue: 0.76),
+                ink: Color(red: 0.18, green: 0.34, blue: 0.30),
+                inkSoft: Color(red: 0.32, green: 0.48, blue: 0.44),
+                cream: Color(red: 0.96, green: 0.99, blue: 0.97),
+                accent: Color(red: 0.28, green: 0.62, blue: 0.52),
+                well: UIColor(red: 0.70, green: 0.84, blue: 0.78, alpha: 1),
+                empty: UIColor(red: 0.94, green: 0.98, blue: 0.96, alpha: 1),
+                emptyStroke: UIColor(red: 0.72, green: 0.86, blue: 0.80, alpha: 1),
+                pieceFills: [
+                    UIColor(red: 0.42, green: 0.72, blue: 0.58, alpha: 1),
+                    UIColor(red: 0.78, green: 0.88, blue: 0.70, alpha: 1),
+                    UIColor(red: 0.90, green: 0.62, blue: 0.58, alpha: 1),
+                    UIColor(red: 0.62, green: 0.78, blue: 0.86, alpha: 1),
+                    UIColor(red: 0.86, green: 0.78, blue: 0.52, alpha: 1),
+                    UIColor(red: 0.70, green: 0.62, blue: 0.82, alpha: 1),
+                    UIColor(red: 0.95, green: 0.84, blue: 0.70, alpha: 1),
+                    UIColor(red: 0.48, green: 0.68, blue: 0.62, alpha: 1),
+                    UIColor(red: 0.82, green: 0.54, blue: 0.50, alpha: 1)
+                ],
+                petal: UIColor(red: 0.55, green: 0.82, blue: 0.68, alpha: 1),
+                validGhost: UIColor(red: 0.22, green: 0.58, blue: 0.52, alpha: 0.55),
+                invalidGhost: UIColor(red: 0.58, green: 0.36, blue: 0.22, alpha: 0.55)
+            )
+        case .desertBloom:
+            base = BoardTheme(
+                pack: pack,
+                backgroundTop: Color(red: 0.99, green: 0.93, blue: 0.82),
+                backgroundBottom: Color(red: 0.90, green: 0.70, blue: 0.48),
+                ink: Color(red: 0.42, green: 0.26, blue: 0.16),
+                inkSoft: Color(red: 0.56, green: 0.40, blue: 0.28),
+                cream: Color(red: 1.0, green: 0.97, blue: 0.90),
+                accent: Color(red: 0.86, green: 0.52, blue: 0.28),
+                well: UIColor(red: 0.88, green: 0.74, blue: 0.52, alpha: 1),
+                empty: UIColor(red: 0.99, green: 0.95, blue: 0.86, alpha: 1),
+                emptyStroke: UIColor(red: 0.90, green: 0.78, blue: 0.58, alpha: 1),
+                pieceFills: [
+                    UIColor(red: 0.90, green: 0.48, blue: 0.32, alpha: 1),
+                    UIColor(red: 0.96, green: 0.74, blue: 0.40, alpha: 1),
+                    UIColor(red: 0.58, green: 0.70, blue: 0.38, alpha: 1),
+                    UIColor(red: 0.86, green: 0.62, blue: 0.42, alpha: 1),
+                    UIColor(red: 0.72, green: 0.42, blue: 0.30, alpha: 1),
+                    UIColor(red: 0.46, green: 0.62, blue: 0.48, alpha: 1),
+                    UIColor(red: 0.98, green: 0.84, blue: 0.55, alpha: 1),
+                    UIColor(red: 0.80, green: 0.36, blue: 0.38, alpha: 1),
+                    UIColor(red: 0.62, green: 0.52, blue: 0.34, alpha: 1)
+                ],
+                petal: UIColor(red: 0.94, green: 0.56, blue: 0.38, alpha: 1),
+                validGhost: UIColor(red: 0.28, green: 0.58, blue: 0.42, alpha: 0.55),
+                invalidGhost: UIColor(red: 0.62, green: 0.28, blue: 0.16, alpha: 0.55)
             )
         }
         guard colorblind else { return base }

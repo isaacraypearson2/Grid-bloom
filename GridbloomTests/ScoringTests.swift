@@ -26,4 +26,10 @@ final class ScoringTests: XCTestCase {
             5
         )
     }
+
+    func testPetalsScaleWithLinesAndCombo() {
+        XCTAssertEqual(Scoring.petals(lineCount: 0, combo: 5), 0)
+        XCTAssertEqual(Scoring.petals(lineCount: 1, combo: 1), 1)
+        XCTAssertEqual(Scoring.petals(lineCount: 2, combo: 4), 5)
+    }
 }

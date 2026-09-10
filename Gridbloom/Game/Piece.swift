@@ -17,9 +17,23 @@ struct Piece: Identifiable, Equatable, Sendable {
     let catalogID: String
     /// Cell offsets, normalized so the bounding box origin is (0, 0).
     let cells: [GridPoint]
+    /// Palette slot; flower identity is the primary tile read.
     let colorIndex: Int
+    let bloom: BloomVariant
+    /// Scanned bloom, if this piece is a photo stamp instead of a catalog glyph.
+    let customBloomID: UUID?
+    let customStorageSlot: Int?
+
+    var flower: FlowerSpecies { bloom.species }
 
     var cellCount: Int { cells.count }
+
+    var storageValue: Int {
+        if let customStorageSlot {
+            return CustomBloom.storageBase + customStorageSlot
+        }
+        return bloom.storageID
+    }
 
     var width: Int {
         (cells.map(\.x).max() ?? 0) + 1
@@ -34,8 +48,25 @@ struct Piece: Identifiable, Equatable, Sendable {
     }
 
     /// New instance with a unique id (used when dealing from the catalog).
-    func spawned(id: UUID = UUID()) -> Piece {
-        Piece(id: id, catalogID: catalogID, cells: cells, colorIndex: colorIndex)
+    func spawned(
+        id: UUID = UUID(),
+        bloom: BloomVariant? = nil,
+        flower: FlowerSpecies? = nil,
+        customBloomID: UUID? = nil,
+        customStorageSlot: Int? = nil
+    ) -> Piece {
+        let nextBloom = bloom
+            ?? flower.map(BloomCatalog.signature)
+            ?? self.bloom
+        return Piece(
+            id: id,
+            catalogID: catalogID,
+            cells: cells,
+            colorIndex: colorIndex,
+            bloom: nextBloom,
+            customBloomID: customBloomID ?? self.customBloomID,
+            customStorageSlot: customStorageSlot ?? self.customStorageSlot
+        )
     }
 
     static func == (lhs: Piece, rhs: Piece) -> Bool {

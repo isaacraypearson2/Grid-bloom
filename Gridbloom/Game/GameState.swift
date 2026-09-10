@@ -1,9 +1,10 @@
 import Foundation
 import Combine
 
-enum GameMode: String, Equatable, Sendable {
+enum GameMode: Equatable, Hashable, Sendable {
     case classic
     case daily
+    case stage(String)
 }
 
 struct PlaceResult: Equatable {
@@ -15,6 +16,7 @@ struct PlaceResult: Equatable {
     var combo: Int
     var trayRefilled: Bool
     var isGameOver: Bool
+    var didUltraWipe: Bool
 }
 
 /// Mutable match: board, tray of three, score, combo, and game-over.
@@ -67,11 +69,14 @@ final class GameState: ObservableObject {
             switch mode {
             case .daily:
                 seed = DailySeed.seed(fromUTCDay: day ?? DailySeed.utcDayString(from: now))
-            case .classic:
+            case .classic, .stage:
                 seed = DailySeed.classicLaunchSeed(from: now)
             }
             self.dealer = FairDealer(rng: SplitMix64(seed: seed))
         }
+        self.dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Self.fallbackFlowers(for: mode)
+        self.dealer.bloomRoster = profile?.playableBlooms(for: mode) ?? Self.fallbackBlooms(for: mode)
+        self.dealer.customBlooms = mode.allowsCustomBlooms ? (profile?.customBlooms ?? []) : []
         self.bestScore = self.scoreStore.best(for: mode, utcDay: day)
         if dealOnStart, tray == nil {
             dealTray()
@@ -83,6 +88,41 @@ final class GameState: ObservableObject {
 
     func attachProfile(_ profile: PlayerProfile) {
         self.profile = profile
+        applyRoster()
+        restampOpeningTrayIfNeeded()
+    }
+
+    private func applyRoster() {
+        dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Self.fallbackFlowers(for: mode)
+        dealer.bloomRoster = profile?.playableBlooms(for: mode) ?? Self.fallbackBlooms(for: mode)
+        dealer.customBlooms = mode.allowsCustomBlooms ? (profile?.customBlooms ?? []) : []
+    }
+
+    private static func fallbackFlowers(for mode: GameMode) -> Set<FlowerSpecies> {
+        switch mode {
+        case .classic, .daily:
+            return Set(FlowerSpecies.starters)
+        case .stage(let id):
+            return Set(GardenStageCatalog.stage(id: id)?.species ?? FlowerSpecies.starters)
+        }
+    }
+
+    private static func fallbackBlooms(for mode: GameMode) -> Set<BloomVariant> {
+        Set(fallbackFlowers(for: mode).map(BloomCatalog.signature))
+    }
+
+    /// Classic deals the first tray in `init` before SwiftUI can attach the profile.
+    /// Overlay scanned stamps and unlocked variants in place (no extra RNG).
+    func restampOpeningTrayIfNeeded() {
+        guard board.occupiedCount == 0, score == 0 else { return }
+        let next = tray.map { piece in
+            piece.map { dealer.restampBloom($0) }
+        }
+        let changed = zip(tray, next).contains { lhs, rhs in
+            lhs?.customBloomID != rhs?.customBloomID || lhs?.bloom != rhs?.bloom
+        }
+        guard changed else { return }
+        tray = next
     }
 
     /// Call from `onAppear` (after the view is mounted), never from `View.init`.
@@ -123,13 +163,27 @@ final class GameState: ObservableObject {
         board.place(piece, at: origin)
         tray[trayIndex] = nil
 
-        let clear = board.clearCompletedLines()
+        var clear = board.clearCompletedLines()
+        var didUltraWipe = false
+        if mode.allowsUltraWipe, clear.bloomVariant?.ability == .gridWipe {
+            let extra = board.occupiedPoints()
+            if !extra.isEmpty {
+                board.clearCells(extra)
+                clear.clearedCells.append(contentsOf: extra)
+            }
+            didUltraWipe = !clear.isEmpty
+        }
+
         combo = Scoring.nextCombo(current: combo, didClear: !clear.isEmpty)
-        let delta = Scoring.totalScore(
+        var delta = Scoring.totalScore(
             cellCount: piece.cellCount,
             lineCount: clear.lineCount,
             comboAfterMove: combo
         )
+        if didUltraWipe {
+            let extra = max(0, clear.cellsCleared - clear.lineCount * Board.size)
+            delta += Scoring.ultraWipeBonus(combo: combo, extraCells: extra)
+        }
         score += delta
         bestScore = scoreStore.updateBest(for: mode, utcDay: utcDay, score: score)
 
@@ -139,7 +193,9 @@ final class GameState: ObservableObject {
         }
         if !clear.isEmpty {
             linesClearedThisRun += clear.lineCount
-            profile?.record(lines: clear.lineCount, combo: combo)
+            profile?.record(lines: clear.lineCount, combo: combo, blooms: [piece.bloom], score: score)
+        } else {
+            profile?.record(lines: 0, combo: combo, blooms: [piece.bloom], score: score)
         }
 
         var refilled = false
@@ -158,7 +214,8 @@ final class GameState: ObservableObject {
             scoreDelta: delta,
             combo: combo,
             trayRefilled: refilled,
-            isGameOver: isGameOver
+            isGameOver: isGameOver,
+            didUltraWipe: didUltraWipe
         )
         lastPlace = result
         return result
@@ -180,6 +237,7 @@ final class GameState: ObservableObject {
         } else {
             dealer = FairDealer(rng: SplitMix64(seed: DailySeed.classicLaunchSeed()))
         }
+        applyRoster()
         bestScore = scoreStore.best(for: mode, utcDay: utcDay)
         dealTray()
         refreshGameOver()

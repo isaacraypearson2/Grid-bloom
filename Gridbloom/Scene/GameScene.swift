@@ -6,6 +6,7 @@ final class GameScene: SKScene {
     unowned var game: GameState
     var theme: BoardTheme
     weak var settings: AppSettings?
+    weak var profile: PlayerProfile?
 
     var onNeedsHUD: (() -> Void)?
     var isPausedOverlay = false
@@ -59,6 +60,9 @@ final class GameScene: SKScene {
     override func didMove(to view: SKView) {
         isUserInteractionEnabled = true
         if boardRoot.parent == nil {
+            boardRoot.zPosition = 0
+            trayRoot.zPosition = 20
+            juiceRoot.zPosition = 50
             addChild(boardRoot)
             addChild(trayRoot)
             addChild(juiceRoot)
@@ -90,6 +94,13 @@ final class GameScene: SKScene {
         drag = nil
         inputLocked = false
         isPausedOverlay = false
+    }
+
+    /// Picks up profile stamps without resetting a drag or pause overlay.
+    func syncProfile(_ profile: PlayerProfile) {
+        self.profile = profile
+        rebuildBoard()
+        rebuildTray(animated: false)
     }
 
     // MARK: Layout
@@ -125,6 +136,7 @@ final class GameScene: SKScene {
         well.position = CGPoint(x: boardRect.midX, y: boardRect.midY)
         well.zPosition = 0
         boardRoot.addChild(well)
+        Juice.mapDecor(pack: theme.pack, boardRect: boardRect, in: boardRoot)
 
         for y in 0..<Board.size {
             for x in 0..<Board.size {
@@ -135,12 +147,7 @@ final class GameScene: SKScene {
 
                 let value = game.board[GridPoint(x: x, y: y)]
                 if value != 0 {
-                    let filled = Juice.ceramicTile(
-                        size: cellSize * 0.9,
-                        fill: theme.pieceFill(index: value - 1),
-                        stroke: theme.pieceStroke(index: value - 1),
-                        theme: theme.pack
-                    )
+                    let filled = tileNode(storage: value, size: cellSize * 0.9)
                     filled.position = empty.position
                     filled.zPosition = 2
                     filled.name = "tile-\(x)-\(y)"
@@ -187,7 +194,12 @@ final class GameScene: SKScene {
             guard drag?.index != index else { continue }
             guard game.tray.indices.contains(index), let piece = game.tray[index] else { continue }
             guard traySlots.indices.contains(index) else { continue }
-            let sprite = PieceSprite(piece: piece, blockSize: cellSize, theme: theme)
+            let sprite = PieceSprite(
+                piece: piece,
+                blockSize: cellSize,
+                theme: theme,
+                stamp: stampImage(for: piece)
+            )
             sprite.position = trayHome(for: piece, slot: traySlots[index])
             sprite.zPosition = 10
             trayRoot.addChild(sprite)
@@ -220,7 +232,14 @@ final class GameScene: SKScene {
         let snap = origin(for: piece, rootPosition: root)
         let valid = game.canPlace(piece, at: snap)
         if ghostNode == nil {
-            let ghost = PieceSprite(piece: piece, blockSize: cellSize, ghost: true, valid: valid, theme: theme)
+            let ghost = PieceSprite(
+                piece: piece,
+                blockSize: cellSize,
+                ghost: true,
+                valid: valid,
+                theme: theme,
+                stamp: stampImage(for: piece)
+            )
             ghost.zPosition = 8
             ghost.alpha = 0.95
             addChild(ghost)
@@ -390,37 +409,102 @@ final class GameScene: SKScene {
             !result.clear.clearedCells.contains(cell)
         })
 
-        let petalCount = reducedMotion ? 0 : min(18, 8 + result.combo * 3)
+        let petalCount = reducedMotion ? 0 : min(22, 10 + result.combo * 4)
+        let mid = result.clear.clearedCells.isEmpty
+            ? CGPoint(x: boardRect.midX, y: boardRect.midY)
+            : scenePoint(cell: result.clear.clearedCells[result.clear.clearedCells.count / 2])
+
         for point in result.clear.clearedCells {
-            let flash = Juice.ceramicTile(
-                size: cellSize * 0.92,
-                fill: theme.petal,
-                stroke: UIColor.white.withAlphaComponent(0.85),
-                theme: theme.pack
+            let species = result.clear.bloomSpecies
+            let variant = result.clear.bloomVariant
+            let custom = profile?.customBloom(storage: result.clear.dominantStorage)
+            let tint = custom?.fillColor ?? variant?.petalTint ?? species.petalTint
+            let flash = tileNode(
+                storage: result.clear.dominantStorage == 0 ? species.rawValue : result.clear.dominantStorage,
+                size: cellSize * 0.92
             )
             flash.position = scenePoint(cell: point)
             flash.zPosition = 25
             juiceRoot.addChild(flash)
             Juice.burstPetals(
                 at: scenePoint(cell: point),
-                color: theme.petal,
+                color: tint,
                 in: juiceRoot,
-                count: max(4, petalCount / max(1, result.clear.clearedCells.count / 2)),
+                count: max(5, petalCount / max(1, result.clear.clearedCells.count / 2)),
                 style: theme.pack,
+                reduced: reducedMotion
+            )
+            Juice.sparkles(
+                at: scenePoint(cell: point),
+                in: juiceRoot,
+                count: reducedMotion ? 0 : (result.combo >= 3 ? 5 : 3),
                 reduced: reducedMotion
             )
             let fade: SKAction = reducedMotion
                 ? .sequence([.fadeOut(withDuration: 0.12), .removeFromParent()])
                 : .sequence([
-                    .group([.scale(to: 1.28, duration: 0.1), .fadeOut(withDuration: 0.28)]),
+                    .group([.scale(to: 1.32, duration: 0.1), .fadeOut(withDuration: 0.3)]),
                     .removeFromParent()
                 ])
             flash.run(fade)
         }
 
-        Juice.screenShake(on: boardRoot, combo: result.combo, reduced: reducedMotion)
+        let bloomSpecies = result.clear.bloomSpecies
+        let bloomVariant = result.clear.bloomVariant
+        let customBloom = profile?.customBloom(storage: result.clear.dominantStorage)
+        let overlayTint = customBloom?.fillColor ?? bloomVariant?.petalTint ?? bloomSpecies.petalTint
+        BloomOverlay.play(
+            in: self,
+            species: customBloom?.guessedSpecies ?? bloomSpecies,
+            title: result.didUltraWipe
+                ? "\(customBloom?.name ?? bloomVariant?.title ?? bloomSpecies.title)  GRID"
+                : (customBloom?.name ?? bloomVariant?.title ?? bloomSpecies.title),
+            tint: overlayTint,
+            stamp: customBloom.flatMap { CustomBloomDisk.stamp(id: $0.id) },
+            combo: result.didUltraWipe ? max(4, result.combo) : max(1, result.combo),
+            reduced: reducedMotion
+        )
 
-        let wait = reducedMotion ? 0.14 : 0.34
+        Juice.flashRing(at: mid, color: overlayTint, in: juiceRoot, reduced: reducedMotion)
+        Juice.screenShake(on: boardRoot, combo: result.combo, reduced: reducedMotion)
+        Juice.screenPunch(on: boardRoot, combo: result.combo, reduced: reducedMotion)
+        Juice.floatingLabel(
+            "+\(result.scoreDelta)",
+            at: CGPoint(x: mid.x, y: mid.y + 18),
+            color: UIColor.white,
+            in: juiceRoot,
+            fontSize: result.combo >= 3 ? 22 : 17,
+            reduced: reducedMotion
+        )
+        if result.combo >= 2, !result.didUltraWipe {
+            Juice.comboBanner(
+                combo: result.combo,
+                color: theme.petal,
+                in: juiceRoot,
+                at: CGPoint(x: boardRect.midX, y: boardRect.maxY - 12),
+                reduced: reducedMotion
+            )
+        }
+        if result.didUltraWipe {
+            Juice.comboBanner(
+                combo: max(5, result.combo),
+                color: overlayTint,
+                in: juiceRoot,
+                at: CGPoint(x: boardRect.midX, y: boardRect.midY + 36),
+                reduced: reducedMotion
+            )
+            Juice.floatingLabel(
+                bloomSpecies.ability?.title ?? bloomVariant?.ability?.title ?? "Grid bloom",
+                at: CGPoint(x: mid.x, y: mid.y - 22),
+                color: overlayTint,
+                in: juiceRoot,
+                fontSize: 16,
+                reduced: reducedMotion
+            )
+            Haptics.heavy()
+        }
+
+        let wait = reducedMotion ? 0.14 : (result.didUltraWipe ? 0.55 : 0.38)
         run(.sequence([
             .wait(forDuration: wait),
             .run { [weak self] in
@@ -446,6 +530,37 @@ final class GameScene: SKScene {
             }
         }
         return best?.0
+    }
+
+    private func stampImage(for piece: Piece) -> UIImage? {
+        guard let id = piece.customBloomID else { return nil }
+        return CustomBloomDisk.stamp(id: id)
+    }
+
+    private func tileNode(storage: Int, size: CGFloat) -> SKNode {
+        if let custom = profile?.customBloom(storage: storage) {
+            let species = custom.guessedSpecies ?? .rose
+            return Juice.flowerTile(
+                size: size,
+                fill: custom.fillColor,
+                stroke: custom.fillColor.darker(by: 0.16),
+                theme: theme.pack,
+                flower: species,
+                stamp: CustomBloomDisk.stamp(id: custom.id)
+            )
+        }
+        let variant = BloomCatalog.variant(fromStorage: storage)
+        let species = variant?.species ?? FlowerSpecies.from(colorIndex: max(0, storage - 1))
+        let fill = variant?.rarity == .ultra
+            ? (variant?.petalTint ?? species.petalTint)
+            : (variant?.petalTint ?? theme.pieceFill(index: species.rawValue - 1))
+        return Juice.flowerTile(
+            size: size,
+            fill: fill,
+            stroke: fill.darker(by: 0.16),
+            theme: theme.pack,
+            flower: species
+        )
     }
 }
 

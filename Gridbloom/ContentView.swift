@@ -3,8 +3,15 @@ import SwiftUI
 enum AppRoute: Equatable {
     case menu
     case play(GameMode)
+    case stages
     case settings
     case shop
+    case album
+    case miniGames
+    case petalCatch
+    case patternBloom
+    case scanFlower
+    case garden
 }
 
 struct ContentView: View {
@@ -12,6 +19,7 @@ struct ContentView: View {
     @EnvironmentObject private var cosmetics: CosmeticsStore
     @EnvironmentObject private var profile: PlayerProfile
     @State private var route: AppRoute = .menu
+    @State private var miniGameToast: String?
     private let scoreStore = UserDefaultsScoreStore()
 
     var body: some View {
@@ -27,23 +35,145 @@ struct ContentView: View {
                     streak: profile.dailyStreak,
                     playedToday: profile.playedDailyToday,
                     gamesPlayed: profile.gamesPlayed,
+                    petals: profile.petals,
+                    rankTitle: profile.gardenRank.title,
+                    seedPackCount: profile.seedPacks.count,
+                    fertilizerCharges: profile.fertilizerCharges,
+                    goals: profile.todayGoals,
+                    goalProgress: profile.goalState,
                     onPlayClassic: { route = .play(.classic) },
                     onPlayDaily: { route = .play(.daily) },
+                    onPlayStages: { route = .stages },
+                    onMiniGames: { route = .miniGames },
+                    onAlbum: { route = .album },
+                    onScanFlower: { route = .scanFlower },
+                    onGarden: { route = .garden },
+                    onSeedPacks: { route = .garden },
                     onShop: { route = .shop },
                     onSettings: { route = .settings }
                 )
             case .play(let mode):
-                // `.id(mode)` keeps Classic vs Daily as distinct StateObjects.
                 GameView(mode: mode, onExit: { route = .menu })
                     .id(mode)
+            case .stages:
+                StagesView(
+                    profile: profile,
+                    theme: theme,
+                    classicBest: scoreStore.best(for: .classic, utcDay: nil),
+                    bestForStage: { scoreStore.best(for: .stage($0), utcDay: nil) },
+                    onPlayClassic: { route = .play(.classic) },
+                    onPlayStage: { route = .play(.stage($0.id)) },
+                    onClose: { route = .menu }
+                )
             case .settings:
                 SettingsView(settings: settings, theme: theme, onClose: { route = .menu })
             case .shop:
-                ShopView(store: cosmetics, settings: settings, theme: theme, onClose: { route = .menu })
+                ShopView(
+                    store: cosmetics,
+                    settings: settings,
+                    profile: profile,
+                    theme: theme,
+                    onPlayPatternBloom: { route = .patternBloom },
+                    onClose: { route = .menu }
+                )
+            case .album:
+                AlbumView(
+                    profile: profile,
+                    cosmetics: cosmetics,
+                    theme: theme,
+                    onScanFlower: { route = .scanFlower },
+                    onClose: { route = .menu }
+                )
+            case .scanFlower:
+                FlowerScanView(profile: profile, theme: theme, onClose: { route = .menu })
+            case .garden:
+                GardenView(profile: profile, theme: theme, onClose: { route = .menu })
+            case .miniGames:
+                MiniGamesView(
+                    theme: theme,
+                    orchidUnlocked: profile.unlockedFlowers.contains(.orchid),
+                    peonyUnlocked: profile.unlockedFlowers.contains(.peony),
+                    greenhouseOwned: cosmetics.isOwned(.greenhouse),
+                    onPetalCatch: { route = .petalCatch },
+                    onPatternBloom: { route = .patternBloom },
+                    onClose: { route = .menu }
+                )
+            case .petalCatch:
+                PetalCatchView(
+                    theme: theme,
+                    reducedMotion: settings.prefersReducedMotion,
+                    onExit: { route = .miniGames },
+                    onFinished: finishPetalCatch
+                )
+            case .patternBloom:
+                PatternBloomView(
+                    theme: theme,
+                    onExit: { route = .miniGames },
+                    onWin: finishPatternBloom
+                )
+            }
+
+            if let miniGameToast {
+                VStack {
+                    Spacer()
+                    Text(miniGameToast)
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(theme.accent.opacity(0.95))
+                        .clipShape(Capsule())
+                        .padding(.bottom, 36)
+                }
+                .allowsHitTesting(false)
             }
         }
         .animation(.easeInOut(duration: settings.prefersReducedMotion ? 0.12 : 0.25), value: route)
         .preferredColorScheme(.light)
+        .onAppear {
+            profile.refreshGoalsIfNeeded()
+            profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
+            _ = profile.grantMilestoneUltraIfEligible()
+            profile.tickGarden()
+        }
+    }
+
+    private func finishPetalCatch(caught: Int, won: Bool) {
+        profile.recordPetalCatches(caught)
+        if won {
+            let first = profile.unlockFlower(.orchid)
+            profile.addPetals(first ? MiniGameKind.petalCatch.winPetals : MiniGameKind.petalCatch.repeatPetals)
+            let pack = first ? MiniGameKind.petalCatch.winPack : MiniGameKind.petalCatch.repeatPack
+            _ = profile.grantPack(pack, source: MiniGameKind.petalCatch.rawValue)
+            if profile.grantMilestoneUltraIfEligible() {
+                showToast("Rare pack + Orchid · Ultra pack!")
+            } else {
+                showToast(first ? "Rare pack + Orchid" : "\(pack.title) seed pack")
+            }
+        }
+        route = .miniGames
+    }
+
+    private func finishPatternBloom() {
+        let first = profile.unlockFlower(.peony)
+        cosmetics.unlockFromProgression(.greenhouse)
+        profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
+        profile.addPetals(first ? MiniGameKind.patternBloom.winPetals : MiniGameKind.patternBloom.repeatPetals)
+        let pack = first ? MiniGameKind.patternBloom.winPack : MiniGameKind.patternBloom.repeatPack
+        _ = profile.grantPack(pack, source: MiniGameKind.patternBloom.rawValue)
+        if profile.grantMilestoneUltraIfEligible() {
+            showToast("Epic pack + Peony · Ultra pack!")
+        } else {
+            showToast(first ? "Epic pack + Peony & Glasshouse" : "\(pack.title) seed pack")
+        }
+        route = .miniGames
+    }
+
+    private func showToast(_ text: String) {
+        miniGameToast = text
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            if miniGameToast == text { miniGameToast = nil }
+        }
     }
 }
 

@@ -38,8 +38,7 @@ final class CosmeticsStore: ObservableObject {
 
     func isOwned(_ pack: CosmeticPack) -> Bool {
         if pack.isFree { return true }
-        guard let id = pack.productID else { return false }
-        return unlockedIDs.contains(id)
+        return unlockedIDs.contains(pack.entitlementKey)
     }
 
     func load() async {
@@ -61,7 +60,7 @@ final class CosmeticsStore: ObservableObject {
     /// One rewarded ad = one unlock attempt. Grants only if the reward is earned.
     func unlockByWatchingAd(_ pack: CosmeticPack) async {
         guard !pack.isFree, !isOwned(pack), !isUnlocking else { return }
-        guard pack.productID != nil else { return }
+        guard pack.isAdUnlock else { return }
         isUnlocking = true
         unlockingPack = pack
         lastError = nil
@@ -76,6 +75,11 @@ final class CosmeticsStore: ObservableObject {
         }
         grantUnlock(pack)
         select(pack)
+    }
+
+    private func grantUnlock(_ pack: CosmeticPack) {
+        unlockedIDs.insert(pack.entitlementKey)
+        persist()
     }
 
     /// Imports leftover StoreKit purchases into local unlocks. Ad unlocks already persist on device.
@@ -93,10 +97,31 @@ final class CosmeticsStore: ObservableObject {
         }
     }
 
-    private func grantUnlock(_ pack: CosmeticPack) {
-        guard let id = pack.productID else { return }
-        unlockedIDs.insert(id)
-        persist()
+    /// Mini-game or other progression unlock. No ad.
+    func unlockFromProgression(_ pack: CosmeticPack, selectNow: Bool = true) {
+        guard !pack.isFree, !isOwned(pack) else {
+            if isOwned(pack), selectNow { select(pack) }
+            return
+        }
+        grantUnlock(pack)
+        if selectNow {
+            select(pack)
+        }
+    }
+
+    /// Fair petal sink for Desert Bloom. Does not gate Classic Garden.
+    @discardableResult
+    func unlockWithPetals(_ pack: CosmeticPack, profile: PlayerProfile) -> Bool {
+        guard let cost = pack.petalCost, !isOwned(pack) else { return false }
+        guard profile.spendPetals(cost) else {
+            lastError = "Need \(cost) petals for \(pack.title)."
+            return false
+        }
+        grantUnlock(pack)
+        select(pack)
+        lastError = nil
+        profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { isOwned($0) })
+        return true
     }
 
     private func persist() {

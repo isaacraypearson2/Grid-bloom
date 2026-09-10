@@ -36,6 +36,7 @@ struct GameView: View {
     @State private var showSettings = false
     @State private var showOnboarding: Bool
     @State private var adMessage: String?
+    @State private var matchBloom: MatchBloomFlash?
     var onExit: () -> Void
 
     private var game: GameState { session.game }
@@ -51,7 +52,7 @@ struct GameView: View {
     }
 
     var body: some View {
-        let theme = cosmetics.resolvedTheme
+        let theme = playTheme
         let reduce = settings.prefersReducedMotion || systemReduceMotion
         return ZStack {
             GardenBackground(theme: theme)
@@ -62,6 +63,7 @@ struct GameView: View {
                     best: game.bestScore,
                     combo: game.combo,
                     modeTitle: modeTitle,
+                    petals: profile.petals,
                     onPause: pause
                 )
                 SpriteView(scene: scene, options: [.allowsTransparency])
@@ -70,11 +72,32 @@ struct GameView: View {
                     .allowsHitTesting(!paused && !game.isGameOver && adMessage == nil && !showOnboarding)
             }
 
+            if let matchBloom {
+                FullScreenMatchBloom(flash: matchBloom, reduced: reduce)
+                    .transition(.opacity)
+                    .zIndex(40)
+            }
+
             if showBloomBanner {
                 ComboBanner(combo: bannerCombo, theme: theme)
                     .transition(reduce ? .opacity : .scale.combined(with: .opacity))
                     .padding(.bottom, 80)
                     .allowsHitTesting(false)
+            }
+
+            if showOnboarding == false, game.score == 0, !paused, !game.isGameOver, profile.gamesPlayed <= 1 {
+                VStack {
+                    Spacer()
+                    Text("Drag a flower onto the garden")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundColor(theme.ink)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(theme.cream.opacity(0.92))
+                        .clipShape(Capsule())
+                        .padding(.bottom, 28)
+                }
+                .allowsHitTesting(false)
             }
 
             if paused, !game.isGameOver, adMessage == nil {
@@ -117,6 +140,7 @@ struct GameView: View {
         }
         .animation(reduce ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.78), value: game.isGameOver)
         .animation(reduce ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.78), value: paused)
+        .animation(reduce ? .easeOut(duration: 0.12) : .easeOut(duration: 0.18), value: matchBloom?.id)
         .sheet(isPresented: $showSettings) {
             SettingsView(settings: settings, theme: theme, onClose: { showSettings = false })
         }
@@ -125,16 +149,38 @@ struct GameView: View {
             // next run-loop turn so @Published updates cannot re-enter ContentView.body.
             game.attachProfile(profile)
             scene.settings = settings
-            scene.apply(theme: theme, colorblind: settings.colorblindPalette)
+            scene.syncProfile(profile)
+            scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
             DispatchQueue.main.async {
                 game.recordSessionStartIfNeeded()
             }
         }
         .onChange(of: cosmetics.selectedPack) { _ in
-            scene.apply(theme: cosmetics.resolvedTheme, colorblind: settings.colorblindPalette)
+            guard game.mode.usesPlayerMapSkin else { return }
+            scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
         }
         .onChange(of: settings.colorblindPalette) { _ in
-            scene.apply(theme: cosmetics.resolvedTheme, colorblind: settings.colorblindPalette)
+            scene.apply(theme: playTheme, colorblind: settings.colorblindPalette)
+        }
+        .onChange(of: game.lastPlace) { result in
+            guard let result, !result.clear.isEmpty || result.didUltraWipe else { return }
+            let species = result.clear.bloomSpecies
+            let variant = result.clear.bloomVariant
+            let custom = profile.customBloom(storage: result.clear.dominantStorage)
+            let flash = MatchBloomFlash(
+                species: custom?.guessedSpecies ?? species,
+                title: result.didUltraWipe
+                    ? "\(custom?.name ?? variant?.title ?? species.title)  GRID"
+                    : (custom?.name ?? variant?.title ?? species.title),
+                tint: Color(custom?.fillColor ?? variant?.petalTint ?? species.petalTint),
+                stamp: custom.flatMap { CustomBloomDisk.stamp(id: $0.id) },
+                combo: result.didUltraWipe ? max(4, result.combo) : max(1, result.combo)
+            )
+            matchBloom = flash
+            let hold = reduce ? 0.35 : 0.9
+            DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+                if matchBloom?.id == flash.id { matchBloom = nil }
+            }
         }
         .onChange(of: game.bloomPulse) { _ in
             bannerCombo = game.lastBloomCombo
@@ -145,12 +191,24 @@ struct GameView: View {
                 withAnimation { showBloomBanner = false }
             }
         }
+        .onChange(of: profile.lastClaimedGoalIDs) { ids in
+            guard !ids.isEmpty else { return }
+            Haptics.success()
+        }
+    }
+
+    private var playTheme: BoardTheme {
+        if !game.mode.usesPlayerMapSkin, let pack = game.mode.stage?.themePack {
+            return BoardTheme.theme(for: pack, colorblind: settings.colorblindPalette)
+        }
+        return cosmetics.resolvedTheme
     }
 
     private var modeTitle: String {
         switch game.mode {
         case .classic: return "Classic"
         case .daily: return "Today’s Bloom"
+        case .stage(let id): return GardenStageCatalog.stage(id: id)?.title ?? "Garden"
         }
     }
 

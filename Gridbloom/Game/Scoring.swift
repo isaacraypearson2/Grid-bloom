@@ -24,4 +24,15 @@ enum Scoring {
     static func nextCombo(current: Int, didClear: Bool) -> Int {
         didClear ? current + 1 : 0
     }
+
+    /// Soft currency: 1 petal per line, plus a small combo bonus. Never the only path to fun.
+    static func petals(lineCount: Int, combo: Int) -> Int {
+        guard lineCount > 0 else { return 0 }
+        return lineCount + max(0, combo - 1)
+    }
+
+    /// Ultra grid-wipe bonus. Extra cells that were not part of a completed line.
+    static func ultraWipeBonus(combo: Int, extraCells: Int) -> Int {
+        40 * max(1, combo) + max(0, extraCells)
+    }
 }

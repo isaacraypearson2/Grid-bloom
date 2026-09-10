@@ -6,9 +6,13 @@ struct OnboardingView: View {
     @State private var page = 0
 
     private let pages: [(String, String, String)] = [
-        ("leaf.fill", "Drag a piece onto the garden", "Tiles snap when the ghost is clear. If it can’t land, it shakes home."),
+        ("leaf.fill", "Drag a flower onto the garden", "Tiles snap when the ghost is clear. If it can’t land, it shakes home."),
         ("square.grid.3x3.fill", "Fill a row or a column", "Complete lines bloom away together. Intersections count once."),
-        ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… That’s the rush.")
+        ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… That flower blooms across the screen."),
+        ("camera.fill", "Scan a real flower", "Snap or pick a photo. We read it on this iPhone and plant it as a playable tile."),
+        ("leaf.circle.fill", "Grow a real-time garden", "Water your plants so they don’t wilt. Watch an ad for fertilizer — 2× growth for 2 hours, once a day per plant. Classic Garden stays free."),
+        ("map.fill", "Flower maps", "Unlock Tulip Walk, Rose Garden, Succulent Dunes, and more by collecting that flower. Classic Garden stays the mixed meadow."),
+        ("book.fill", "Collect colors & rarities", "Each species has color variants and a Common → Rare → Epic → Ultra ladder. Ultra still wipes the board. Classic Garden is always free to play.")
     ]
 
     var body: some View {

@@ -62,7 +62,15 @@ enum PieceCatalog {
 
     private static func make(_ id: String, _ cells: [(Int, Int)], _ color: Int) -> Piece {
         let points = cells.map { GridPoint(x: $0.0, y: $0.1) }
-        return Piece(id: templateID, catalogID: id, cells: points, colorIndex: color)
+        return Piece(
+            id: templateID,
+            catalogID: id,
+            cells: points,
+            colorIndex: color,
+            bloom: BloomCatalog.signature(FlowerSpecies.from(colorIndex: color)),
+            customBloomID: nil,
+            customStorageSlot: nil
+        )
     }
 
     static func piece(catalogID: String) -> Piece? {
