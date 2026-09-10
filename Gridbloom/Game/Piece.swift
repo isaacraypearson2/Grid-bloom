@@ -17,7 +17,9 @@ struct Piece: Identifiable, Equatable, Sendable {
     let catalogID: String
     /// Cell offsets, normalized so the bounding box origin is (0, 0).
     let cells: [GridPoint]
+    /// Palette slot; flower identity is the primary tile read.
     let colorIndex: Int
+    let flower: FlowerSpecies
 
     var cellCount: Int { cells.count }
 
@@ -34,8 +36,14 @@ struct Piece: Identifiable, Equatable, Sendable {
     }
 
     /// New instance with a unique id (used when dealing from the catalog).
-    func spawned(id: UUID = UUID()) -> Piece {
-        Piece(id: id, catalogID: catalogID, cells: cells, colorIndex: colorIndex)
+    func spawned(id: UUID = UUID(), flower: FlowerSpecies? = nil) -> Piece {
+        Piece(
+            id: id,
+            catalogID: catalogID,
+            cells: cells,
+            colorIndex: colorIndex,
+            flower: flower ?? self.flower
+        )
     }
 
     static func == (lhs: Piece, rhs: Piece) -> Bool {

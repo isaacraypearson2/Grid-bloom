@@ -6,9 +6,10 @@ struct OnboardingView: View {
     @State private var page = 0
 
     private let pages: [(String, String, String)] = [
-        ("leaf.fill", "Drag a piece onto the garden", "Tiles snap when the ghost is clear. If it can’t land, it shakes home."),
+        ("leaf.fill", "Drag a flower onto the garden", "Tiles snap when the ghost is clear. If it can’t land, it shakes home."),
         ("square.grid.3x3.fill", "Fill a row or a column", "Complete lines bloom away together. Intersections count once."),
-        ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… That’s the rush.")
+        ("sparkles", "Chain Bloom combos", "Clear on consecutive drops for Bloom x2, x3… Petals burst, the board punches."),
+        ("book.fill", "Collect flowers & maps", "Album, daily goals, and side gardens unlock new species and playfield skins. Classic Garden is always free to play.")
     ]
 
     var body: some View {

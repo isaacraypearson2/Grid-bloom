@@ -62,6 +62,7 @@ struct GameView: View {
                     best: game.bestScore,
                     combo: game.combo,
                     modeTitle: modeTitle,
+                    petals: profile.petals,
                     onPause: pause
                 )
                 SpriteView(scene: scene, options: [.allowsTransparency])
@@ -75,6 +76,21 @@ struct GameView: View {
                     .transition(reduce ? .opacity : .scale.combined(with: .opacity))
                     .padding(.bottom, 80)
                     .allowsHitTesting(false)
+            }
+
+            if showOnboarding == false, game.score == 0, !paused, !game.isGameOver, profile.gamesPlayed <= 1 {
+                VStack {
+                    Spacer()
+                    Text("Drag a flower onto the garden")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundColor(theme.ink)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(theme.cream.opacity(0.92))
+                        .clipShape(Capsule())
+                        .padding(.bottom, 28)
+                }
+                .allowsHitTesting(false)
             }
 
             if paused, !game.isGameOver, adMessage == nil {
@@ -144,6 +160,10 @@ struct GameView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + (reduce ? 0.45 : 0.95)) {
                 withAnimation { showBloomBanner = false }
             }
+        }
+        .onChange(of: profile.lastClaimedGoalIDs) { ids in
+            guard !ids.isEmpty else { return }
+            Haptics.success()
         }
     }
 

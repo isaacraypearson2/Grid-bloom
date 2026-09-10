@@ -20,6 +20,8 @@ final class CosmeticsTests: XCTestCase {
         XCTAssertFalse(store.isOwned(.sakura))
         XCTAssertFalse(store.isOwned(.moonlight))
         XCTAssertFalse(store.isOwned(.sunflower))
+        XCTAssertFalse(store.isOwned(.greenhouse))
+        XCTAssertFalse(store.isOwned(.desertBloom))
     }
 
     func testWatchingAdUnlocksPackPermanentlyWhenRewardIsEarned() async throws {

@@ -87,6 +87,35 @@ struct GardenBackground: View {
                 .opacity(0.16)
                 .padding(36)
         }
+        .overlay {
+            switch theme.pack {
+            case .moonlight:
+                VStack {
+                    HStack {
+                        Spacer()
+                        Circle()
+                            .fill(Color.white.opacity(0.35))
+                            .frame(width: 72, height: 72)
+                            .padding(36)
+                    }
+                    Spacer()
+                }
+            case .desertBloom:
+                VStack {
+                    Spacer()
+                    Capsule()
+                        .fill(Color(red: 0.86, green: 0.62, blue: 0.32).opacity(0.22))
+                        .frame(height: 70)
+                        .offset(y: 20)
+                }
+            case .greenhouse:
+                RoundedRectangle(cornerRadius: 0)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    .padding(28)
+            case .sakura, .garden, .sunflower:
+                EmptyView()
+            }
+        }
     }
 }
 

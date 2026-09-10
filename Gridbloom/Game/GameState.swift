@@ -72,6 +72,7 @@ final class GameState: ObservableObject {
             }
             self.dealer = FairDealer(rng: SplitMix64(seed: seed))
         }
+        self.dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Set(FlowerSpecies.starters)
         self.bestScore = self.scoreStore.best(for: mode, utcDay: day)
         if dealOnStart, tray == nil {
             dealTray()
@@ -83,6 +84,7 @@ final class GameState: ObservableObject {
 
     func attachProfile(_ profile: PlayerProfile) {
         self.profile = profile
+        dealer.flowerRoster = profile.playableFlowers(for: mode)
     }
 
     /// Call from `onAppear` (after the view is mounted), never from `View.init`.
@@ -139,7 +141,9 @@ final class GameState: ObservableObject {
         }
         if !clear.isEmpty {
             linesClearedThisRun += clear.lineCount
-            profile?.record(lines: clear.lineCount, combo: combo)
+            profile?.record(lines: clear.lineCount, combo: combo, flowers: [piece.flower], score: score)
+        } else {
+            profile?.record(lines: 0, combo: combo, flowers: [piece.flower], score: score)
         }
 
         var refilled = false
@@ -180,6 +184,7 @@ final class GameState: ObservableObject {
         } else {
             dealer = FairDealer(rng: SplitMix64(seed: DailySeed.classicLaunchSeed()))
         }
+        dealer.flowerRoster = profile?.playableFlowers(for: mode) ?? Set(FlowerSpecies.starters)
         bestScore = scoreStore.best(for: mode, utcDay: utcDay)
         dealTray()
         refreshGameOver()

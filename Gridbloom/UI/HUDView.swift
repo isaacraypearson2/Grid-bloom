@@ -6,6 +6,7 @@ struct HUDView: View {
     var best: Int
     var combo: Int
     var modeTitle: String
+    var petals: Int
     var onPause: () -> Void
 
     var body: some View {
@@ -36,6 +37,16 @@ struct HUDView: View {
             }
 
             VStack(alignment: .trailing, spacing: 2) {
+                Text("Petals")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+                Text("\(petals)")
+                    .font(.system(.headline, design: .rounded).weight(.semibold))
+                    .foregroundColor(theme.ink)
+                    .monospacedDigit()
+            }
+
+            VStack(alignment: .trailing, spacing: 2) {
                 Text("Best")
                     .font(.system(.caption2, design: .rounded))
                     .foregroundColor(theme.inkSoft)
@@ -56,7 +67,7 @@ struct ComboBanner: View {
     var theme: BoardTheme
 
     var body: some View {
-        Text(combo >= 4 ? "Garden rush  x\(combo)" : "Bloom x\(combo)")
+        Text(combo >= 5 ? "Garden rush  x\(combo)" : (combo >= 3 ? "Bloom x\(combo)!" : "Bloom x\(combo)"))
             .font(.system(size: 32, weight: .bold, design: .rounded))
             .foregroundColor(.white)
             .padding(.horizontal, 28)

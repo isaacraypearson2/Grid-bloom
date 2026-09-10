@@ -59,6 +59,14 @@
 		A10000000000000000000163 /* AdMobRewardedAdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000162 /* AdMobRewardedAdService.swift */; };
 		A10000000000000000000166 /* AdConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000165 /* AdConfigTests.swift */; };
 		A10000000000000000000171 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000172 /* GoogleMobileAds */; };
+		A10000000000000000000181 /* FlowerSpecies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000180 /* FlowerSpecies.swift */; };
+		A10000000000000000000183 /* DailyGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000182 /* DailyGoals.swift */; };
+		A10000000000000000000185 /* MiniGameRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000184 /* MiniGameRules.swift */; };
+		A10000000000000000000187 /* PetalCatchScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000186 /* PetalCatchScene.swift */; };
+		A10000000000000000000189 /* AlbumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000188 /* AlbumView.swift */; };
+		A10000000000000000000191 /* MiniGamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000190 /* MiniGamesView.swift */; };
+		A10000000000000000000193 /* PatternBloomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000192 /* PatternBloomView.swift */; };
+		A10000000000000000000195 /* FlowerMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000194 /* FlowerMetaTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +135,14 @@
 		A10000000000000000000162 /* AdMobRewardedAdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobRewardedAdService.swift; sourceTree = "<group>"; };
 		A10000000000000000000164 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000165 /* AdConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdConfigTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000180 /* FlowerSpecies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSpecies.swift; sourceTree = "<group>"; };
+		A10000000000000000000182 /* DailyGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyGoals.swift; sourceTree = "<group>"; };
+		A10000000000000000000184 /* MiniGameRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniGameRules.swift; sourceTree = "<group>"; };
+		A10000000000000000000186 /* PetalCatchScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetalCatchScene.swift; sourceTree = "<group>"; };
+		A10000000000000000000188 /* AlbumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumView.swift; sourceTree = "<group>"; };
+		A10000000000000000000190 /* MiniGamesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniGamesView.swift; sourceTree = "<group>"; };
+		A10000000000000000000192 /* PatternBloomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternBloomView.swift; sourceTree = "<group>"; };
+		A10000000000000000000194 /* FlowerMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerMetaTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -221,6 +237,9 @@
 				A10000000000000000000054 /* ScoreStore.swift */,
 				A10000000000000000000056 /* GameState.swift */,
 				A10000000000000000000102 /* PlayerProfile.swift */,
+				A10000000000000000000180 /* FlowerSpecies.swift */,
+				A10000000000000000000182 /* DailyGoals.swift */,
+				A10000000000000000000184 /* MiniGameRules.swift */,
 			);
 			path = Game;
 			sourceTree = "<group>";
@@ -230,6 +249,7 @@
 			children = (
 				A10000000000000000000058 /* GameScene.swift */,
 				A10000000000000000000060 /* Juice.swift */,
+				A10000000000000000000186 /* PetalCatchScene.swift */,
 			);
 			path = Scene;
 			sourceTree = "<group>";
@@ -254,6 +274,9 @@
 				A10000000000000000000114 /* SettingsView.swift */,
 				A10000000000000000000116 /* ShopView.swift */,
 				A10000000000000000000118 /* OnboardingView.swift */,
+				A10000000000000000000188 /* AlbumView.swift */,
+				A10000000000000000000190 /* MiniGamesView.swift */,
+				A10000000000000000000192 /* PatternBloomView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -296,6 +319,7 @@
 				A10000000000000000000150 /* GameLayoutTests.swift */,
 				A10000000000000000000152 /* GameStabilityTests.swift */,
 				A10000000000000000000165 /* AdConfigTests.swift */,
+				A10000000000000000000194 /* FlowerMetaTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -442,6 +466,13 @@
 				A10000000000000000000115 /* SettingsView.swift in Sources */,
 				A10000000000000000000117 /* ShopView.swift in Sources */,
 				A10000000000000000000119 /* OnboardingView.swift in Sources */,
+				A10000000000000000000181 /* FlowerSpecies.swift in Sources */,
+				A10000000000000000000183 /* DailyGoals.swift in Sources */,
+				A10000000000000000000185 /* MiniGameRules.swift in Sources */,
+				A10000000000000000000187 /* PetalCatchScene.swift in Sources */,
+				A10000000000000000000189 /* AlbumView.swift in Sources */,
+				A10000000000000000000191 /* MiniGamesView.swift in Sources */,
+				A10000000000000000000193 /* PatternBloomView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -459,6 +490,7 @@
 				A10000000000000000000151 /* GameLayoutTests.swift in Sources */,
 				A10000000000000000000153 /* GameStabilityTests.swift in Sources */,
 				A10000000000000000000166 /* AdConfigTests.swift in Sources */,
+				A10000000000000000000195 /* FlowerMetaTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

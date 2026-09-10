@@ -8,36 +8,46 @@ struct MainMenuView: View {
     var streak: Int
     var playedToday: Bool
     var gamesPlayed: Int
+    var petals: Int
+    var rankTitle: String
+    var goals: [DailyGoal]
+    var goalProgress: DailyGoalProgress
     var onPlayClassic: () -> Void
     var onPlayDaily: () -> Void
+    var onMiniGames: () -> Void
+    var onAlbum: () -> Void
     var onShop: () -> Void
     var onSettings: () -> Void
 
     var body: some View {
         ZStack {
             GardenBackground(theme: theme)
-            VStack(spacing: 22) {
+            VStack(spacing: 18) {
                 HStack {
                     IconCircleButton(systemName: "bag", label: "Shop", theme: theme, action: onShop)
+                    IconCircleButton(systemName: "book.fill", label: "Album", theme: theme, action: onAlbum)
                     Spacer()
                     IconCircleButton(systemName: "slider.horizontal.3", label: "Settings", theme: theme, action: onSettings)
                 }
                 .padding(.horizontal, 22)
                 .padding(.top, 8)
 
-                Spacer(minLength: 8)
+                Spacer(minLength: 4)
 
-                BloomMark(size: 88, petal: theme.accent)
-                    .padding(.bottom, 4)
+                BloomMark(size: 80, petal: theme.accent)
+                    .padding(.bottom, 2)
 
                 VStack(spacing: 8) {
                     Text("Gridbloom")
                         .font(.system(size: 42, weight: .bold, design: .rounded))
                         .foregroundColor(theme.ink)
                         .tracking(0.4)
-                    Text("Plant pieces. Bloom the grid.")
+                    Text("Plant flowers. Bloom the grid.")
                         .font(.system(.headline, design: .rounded))
                         .foregroundColor(theme.inkSoft)
+                    Text("\(petals) petals  ·  \(rankTitle)")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundColor(theme.accent)
                 }
 
                 VStack(spacing: 12) {
@@ -54,6 +64,11 @@ struct MainMenuView: View {
                         )
                     }
                     .buttonStyle(GardenButtonStyle(fill: GardenPalette.dailyFill))
+
+                    Button(action: onMiniGames) {
+                        menuLabel(title: "Side gardens", subtitle: "Catch petals · Pattern bloom", systemImage: "sparkles")
+                    }
+                    .buttonStyle(GardenButtonStyle(fill: Color(red: 0.58, green: 0.62, blue: 0.82)))
                 }
                 .padding(.horizontal, 28)
 
@@ -64,8 +79,11 @@ struct MainMenuView: View {
                 }
                 .padding(.horizontal, 24)
 
+                dailyGoalsCard
+                    .padding(.horizontal, 24)
+
                 Text(gamesPlayed == 0
-                     ? "Clear rows & columns · chain Bloom combos"
+                     ? "Clear rows & columns · collect flowers"
                      : "\(gamesPlayed) gardens planted")
                     .font(.system(.footnote, design: .rounded))
                     .foregroundColor(theme.inkSoft.opacity(0.9))
@@ -80,6 +98,29 @@ struct MainMenuView: View {
             return utcDay + " · played today"
         }
         return utcDay + " · UTC seed"
+    }
+
+    private var dailyGoalsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Today’s goals")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundColor(theme.inkSoft)
+            ForEach(goals) { goal in
+                let value = goalProgress.value(for: goal)
+                HStack {
+                    Text(goal.title)
+                        .font(.system(.caption, design: .rounded).weight(.semibold))
+                        .foregroundColor(theme.ink)
+                    Spacer()
+                    Text(goalProgress.isComplete(goal) ? "+\(goal.rewardPetals)" : "\(value)/\(goal.target)")
+                        .font(.system(.caption, design: .rounded).monospacedDigit())
+                        .foregroundColor(goalProgress.isComplete(goal) ? theme.accent : theme.inkSoft)
+                }
+            }
+        }
+        .padding(12)
+        .background(theme.cream.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func menuLabel(title: String, subtitle: String, systemImage: String) -> some View {
@@ -100,7 +141,7 @@ struct MainMenuView: View {
         }
         .foregroundColor(.white)
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
     }
 
     private func scoreChip(title: String, value: String) -> some View {

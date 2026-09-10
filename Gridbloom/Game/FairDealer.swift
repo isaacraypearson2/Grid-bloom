@@ -9,6 +9,8 @@ struct FairDealer {
     /// Trays already dealt this run. Opening grace uses this, not occupancy alone.
     var traysDealt = 0
     var openingGraceTrays = 5
+    /// Flowers the dealer may stamp onto pieces. Daily Bloom should pass starters only.
+    var flowerRoster: Set<FlowerSpecies> = Set(FlowerSpecies.starters)
 
     init(rng: SplitMix64, catalog: [Piece] = PieceCatalog.all) {
         self.rng = rng
@@ -47,12 +49,12 @@ struct FairDealer {
     }
 
     mutating func randomTray(on board: Board) -> [Piece] {
-        (0..<3).map { _ in pickWeighted(occupancy: board.occupancy).spawned() }
+        (0..<3).map { _ in stamp(pickWeighted(occupancy: board.occupancy)) }
     }
 
     mutating func pickWeighted(occupancy: Double) -> Piece {
         guard !catalog.isEmpty else {
-            return Piece(id: UUID(), catalogID: "empty", cells: [GridPoint(x: 0, y: 0)], colorIndex: 0)
+            return Piece(id: UUID(), catalogID: "empty", cells: [GridPoint(x: 0, y: 0)], colorIndex: 0, flower: .tulip)
         }
         let weights = catalog.map { weight(for: $0, occupancy: occupancy) }
         let index = weightedIndex(weights: weights)
@@ -89,7 +91,11 @@ struct FairDealer {
         }
         let second = pickWeighted(occupancy: board.occupancy)
         let third = pickWeighted(occupancy: board.occupancy)
-        return [first.spawned(), second.spawned(), third.spawned()]
+        return [stamp(first), stamp(second), stamp(third)]
+    }
+
+    private func stamp(_ piece: Piece) -> Piece {
+        piece.spawned(flower: FlowerSpecies.playable(at: piece.colorIndex, unlocked: flowerRoster))
     }
 
     private mutating func weightedIndex(weights: [Double]) -> Int {

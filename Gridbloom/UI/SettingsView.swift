@@ -4,6 +4,7 @@ struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     var theme: BoardTheme
     var onClose: () -> Void
+    @State private var showHelp = false
 
     var body: some View {
         ZStack {
@@ -30,7 +31,11 @@ struct SettingsView: View {
                 .background(theme.cream.opacity(0.78))
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-                Text("Ads never start themselves. Continue and tray shuffle only run when you tap them.")
+                PrimaryGardenButton(title: "How to play", fill: theme.accent) {
+                    showHelp = true
+                }
+
+                Text("Ads never start themselves. Continue, New tray, and Greenhouse unlocks only run when you tap them.")
                     .font(.system(.footnote, design: .rounded))
                     .foregroundColor(theme.inkSoft)
                     .padding(.top, 8)
@@ -38,6 +43,15 @@ struct SettingsView: View {
                 Spacer()
             }
             .padding(24)
+        }
+        .sheet(isPresented: $showHelp) {
+            ZStack {
+                GardenBackground(theme: theme)
+                OnboardingView(theme: theme) {
+                    settings.hasCompletedOnboarding = true
+                    showHelp = false
+                }
+            }
         }
     }
 

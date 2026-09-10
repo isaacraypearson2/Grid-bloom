@@ -16,7 +16,7 @@ struct ClearResult: Equatable, Sendable {
 struct Board: Equatable, Sendable {
     static let size = 8
 
-    /// `cells[row][column]`. `0` is empty; positive values are piece color indexes + 1.
+    /// `cells[row][column]`. `0` is empty; positive values are `FlowerSpecies.rawValue`.
     private(set) var cells: [[Int]]
 
     init(filled: [[Int]]? = nil) {
@@ -95,7 +95,7 @@ struct Board: Equatable, Sendable {
 
     mutating func place(_ piece: Piece, at origin: GridPoint) {
         guard canPlace(piece, at: origin) else { return }
-        let value = piece.colorIndex + 1
+        let value = piece.flower.rawValue
         for point in piece.occupying(at: origin) where isInBounds(point) {
             cells[point.y][point.x] = value
         }

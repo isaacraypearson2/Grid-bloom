@@ -125,6 +125,7 @@ final class GameScene: SKScene {
         well.position = CGPoint(x: boardRect.midX, y: boardRect.midY)
         well.zPosition = 0
         boardRoot.addChild(well)
+        Juice.mapDecor(pack: theme.pack, boardRect: boardRect, in: boardRoot)
 
         for y in 0..<Board.size {
             for x in 0..<Board.size {
@@ -135,11 +136,13 @@ final class GameScene: SKScene {
 
                 let value = game.board[GridPoint(x: x, y: y)]
                 if value != 0 {
-                    let filled = Juice.ceramicTile(
+                    let species = FlowerSpecies(rawValue: value) ?? FlowerSpecies.from(colorIndex: value - 1)
+                    let filled = Juice.flowerTile(
                         size: cellSize * 0.9,
-                        fill: theme.pieceFill(index: value - 1),
-                        stroke: theme.pieceStroke(index: value - 1),
-                        theme: theme.pack
+                        fill: theme.pieceFill(index: species.rawValue - 1),
+                        stroke: theme.pieceStroke(index: species.rawValue - 1),
+                        theme: theme.pack,
+                        flower: species
                     )
                     filled.position = empty.position
                     filled.zPosition = 2
@@ -390,13 +393,19 @@ final class GameScene: SKScene {
             !result.clear.clearedCells.contains(cell)
         })
 
-        let petalCount = reducedMotion ? 0 : min(18, 8 + result.combo * 3)
+        let petalCount = reducedMotion ? 0 : min(22, 10 + result.combo * 4)
+        let mid = result.clear.clearedCells.isEmpty
+            ? CGPoint(x: boardRect.midX, y: boardRect.midY)
+            : scenePoint(cell: result.clear.clearedCells[result.clear.clearedCells.count / 2])
+
         for point in result.clear.clearedCells {
-            let flash = Juice.ceramicTile(
+            let species = FlowerSpecies.from(colorIndex: max(0, result.combo))
+            let flash = Juice.flowerTile(
                 size: cellSize * 0.92,
                 fill: theme.petal,
                 stroke: UIColor.white.withAlphaComponent(0.85),
-                theme: theme.pack
+                theme: theme.pack,
+                flower: species
             )
             flash.position = scenePoint(cell: point)
             flash.zPosition = 25
@@ -405,22 +414,47 @@ final class GameScene: SKScene {
                 at: scenePoint(cell: point),
                 color: theme.petal,
                 in: juiceRoot,
-                count: max(4, petalCount / max(1, result.clear.clearedCells.count / 2)),
+                count: max(5, petalCount / max(1, result.clear.clearedCells.count / 2)),
                 style: theme.pack,
+                reduced: reducedMotion
+            )
+            Juice.sparkles(
+                at: scenePoint(cell: point),
+                in: juiceRoot,
+                count: reducedMotion ? 0 : (result.combo >= 3 ? 5 : 3),
                 reduced: reducedMotion
             )
             let fade: SKAction = reducedMotion
                 ? .sequence([.fadeOut(withDuration: 0.12), .removeFromParent()])
                 : .sequence([
-                    .group([.scale(to: 1.28, duration: 0.1), .fadeOut(withDuration: 0.28)]),
+                    .group([.scale(to: 1.32, duration: 0.1), .fadeOut(withDuration: 0.3)]),
                     .removeFromParent()
                 ])
             flash.run(fade)
         }
 
+        Juice.flashRing(at: mid, color: theme.petal, in: juiceRoot, reduced: reducedMotion)
         Juice.screenShake(on: boardRoot, combo: result.combo, reduced: reducedMotion)
+        Juice.screenPunch(on: boardRoot, combo: result.combo, reduced: reducedMotion)
+        Juice.floatingLabel(
+            "+\(result.scoreDelta)",
+            at: CGPoint(x: mid.x, y: mid.y + 18),
+            color: UIColor.white,
+            in: juiceRoot,
+            fontSize: result.combo >= 3 ? 22 : 17,
+            reduced: reducedMotion
+        )
+        if result.combo >= 2 {
+            Juice.comboBanner(
+                combo: result.combo,
+                color: theme.petal,
+                in: juiceRoot,
+                at: CGPoint(x: boardRect.midX, y: boardRect.maxY - 12),
+                reduced: reducedMotion
+            )
+        }
 
-        let wait = reducedMotion ? 0.14 : 0.34
+        let wait = reducedMotion ? 0.14 : 0.38
         run(.sequence([
             .wait(forDuration: wait),
             .run { [weak self] in

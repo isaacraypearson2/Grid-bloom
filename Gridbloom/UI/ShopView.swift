@@ -3,7 +3,9 @@ import SwiftUI
 struct ShopView: View {
     @ObservedObject var store: CosmeticsStore
     @ObservedObject var settings: AppSettings
+    @ObservedObject var profile: PlayerProfile
     var theme: BoardTheme
+    var onPlayPatternBloom: () -> Void
     var onClose: () -> Void
 
     var body: some View {
@@ -15,7 +17,7 @@ struct ShopView: View {
                         Text("Greenhouse")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("Watch a short bloom to unlock a pack. Garden Clay is always yours.")
+                        Text("Maps and glazes. Classic Garden is never paywalled. You have \(profile.petals) petals.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -85,9 +87,12 @@ struct ShopView: View {
                 ProgressView()
                     .tint(theme.accent)
                     .frame(width: 44, height: 32)
-            } else {
+            } else if pack.isAdUnlock {
                 Button("Watch to unlock") {
-                    Task { await store.unlockByWatchingAd(pack) }
+                    Task {
+                        await store.unlockByWatchingAd(pack)
+                        profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { store.isOwned($0) })
+                    }
                 }
                 .font(.system(.subheadline, design: .rounded).weight(.bold))
                 .foregroundColor(.white)
@@ -97,6 +102,30 @@ struct ShopView: View {
                 .clipShape(Capsule())
                 .disabled(store.isUnlocking)
                 .accessibilityLabel("Watch an ad to unlock \(pack.title)")
+            } else if pack.miniGameUnlock != nil {
+                Button("Play to unlock") {
+                    onPlayPatternBloom()
+                }
+                .font(.system(.subheadline, design: .rounded).weight(.bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(theme.accent)
+                .clipShape(Capsule())
+            } else if let cost = pack.petalCost {
+                Button("\(cost) petals") {
+                    if store.unlockWithPetals(pack, profile: profile) {
+                        Haptics.success()
+                    } else {
+                        Haptics.error()
+                    }
+                }
+                .font(.system(.subheadline, design: .rounded).weight(.bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(GardenPalette.dailyFill)
+                .clipShape(Capsule())
             }
         }
         .padding(14)
