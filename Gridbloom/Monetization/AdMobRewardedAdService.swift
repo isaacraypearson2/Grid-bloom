@@ -26,7 +26,11 @@ enum MobileAdsBootstrap {
 
 /// Real AdMob rewarded ads for player-initiated revive and tray shuffle.
 /// Never grants a reward unless Google’s earn-reward callback fires.
-final class AdMobRewardedAdService: NSObject, AdServing, FullScreenContentDelegate {
+///
+/// Google Mobile Ads is an ObjC SDK: presentation and `FullScreenContentDelegate`
+/// callbacks run on the main thread. Mutable ad state is only touched after hopping
+/// to main, so this type is `@unchecked Sendable` for Task / continuation captures.
+final class AdMobRewardedAdService: NSObject, AdServing, FullScreenContentDelegate, @unchecked Sendable {
     private var rewardedAd: RewardedAd?
     private var continuation: CheckedContinuation<Bool, Never>?
     private var earnedReward = false
@@ -39,14 +43,19 @@ final class AdMobRewardedAdService: NSObject, AdServing, FullScreenContentDelega
     func showRewarded(placement: RewardedPlacement) async -> Bool {
         MobileAdsBootstrap.startIfNeeded()
         return await withCheckedContinuation { continuation in
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    continuation.resume(returning: false)
+                    return
+                }
                 self.beginShow(continuation: continuation)
             }
         }
     }
 
     func preload() {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
             Task { await self.preloadQuietly() }
         }
     }

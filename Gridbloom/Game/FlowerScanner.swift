@@ -146,7 +146,7 @@ enum FlowerScanner {
         } catch {
             return nil
         }
-        let observations = (request.results as? [VNClassificationObservation]) ?? []
+        guard let observations = request.results else { return nil }
         for item in observations.prefix(8) {
             let id = item.identifier.lowercased()
             guard item.confidence >= 0.15 else { continue }
