@@ -84,8 +84,6 @@ final class PlayerProfile: ObservableObject {
         } else {
             seedCounts = [:]
         }
-        migrateSeedKeys()
-        migrateCollectedVariants()
         if let packData = defaults.data(forKey: Keys.packs),
            let packs = try? JSONDecoder().decode([OwnedSeedPack].self, from: packData) {
             seedPacks = packs
@@ -96,17 +94,20 @@ final class PlayerProfile: ObservableObject {
         lastHarvested = nil
         lastGardenEvent = nil
         fertilizerCharges = defaults.integer(forKey: Keys.fertilizer)
-        if !defaults.bool(forKey: Keys.starterSeeds) {
-            defaults.set(true, forKey: Keys.starterSeeds)
-            addSeed(.tulip)
-            addSeed(.daisy)
-            addSeed(.rose)
-        }
         if let data = defaults.data(forKey: Keys.goals),
            let decoded = try? JSONDecoder().decode(DailyGoalProgress.self, from: data) {
             goalState = decoded
         } else {
             goalState = DailyGoalProgress(utcDay: DailySeed.utcDayString())
+        }
+        // Instance methods require every stored property to already be initialized.
+        migrateSeedKeys()
+        migrateCollectedVariants()
+        if !defaults.bool(forKey: Keys.starterSeeds) {
+            defaults.set(true, forKey: Keys.starterSeeds)
+            addSeed(.tulip)
+            addSeed(.daisy)
+            addSeed(.rose)
         }
         refreshGoalsIfNeeded(utcDay: DailySeed.utcDayString())
         tickGarden(now: Date())

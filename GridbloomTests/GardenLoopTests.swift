@@ -250,6 +250,58 @@ final class GardenLoopTests: XCTestCase {
         XCTAssertEqual(second.seedCount(for: .rose), 2)
     }
 
+    func testLegacySeedKeysMigrateWithoutWipingPacksOrFertilizer() throws {
+        let suite = try XCTUnwrap(UserDefaults(suiteName: "gridbloom.garden.\(UUID().uuidString)"))
+        suite.set(true, forKey: "gridbloom.profile.starterSeeds")
+        let tulipRaw = String(FlowerSpecies.tulip.rawValue)
+        let daisyRaw = String(FlowerSpecies.daisy.rawValue)
+        suite.set(
+            try JSONEncoder().encode([tulipRaw: 3, daisyRaw: 2]),
+            forKey: "gridbloom.profile.seedCounts"
+        )
+        suite.set(2, forKey: "gridbloom.profile.fertilizerCharges")
+        let pack = OwnedSeedPack(id: UUID(), rarity: .rare, source: "legacy")
+        suite.set(try JSONEncoder().encode([pack]), forKey: "gridbloom.profile.seedPacks")
+        let savedGoals = DailyGoalProgress(
+            utcDay: DailySeed.utcDayString(),
+            values: ["lines": 4],
+            claimed: ["lines"]
+        )
+        suite.set(try JSONEncoder().encode(savedGoals), forKey: "gridbloom.profile.dailyGoals")
+
+        let profile = PlayerProfile(defaults: suite)
+        XCTAssertEqual(profile.seedCount(for: BloomCatalog.signature(.tulip)), 3)
+        XCTAssertEqual(profile.seedCount(for: BloomCatalog.signature(.daisy)), 2)
+        XCTAssertNil(profile.seedCounts[tulipRaw])
+        XCTAssertNil(profile.seedCounts[daisyRaw])
+        XCTAssertEqual(profile.fertilizerCharges, 2)
+        XCTAssertEqual(profile.seedPacks.map(\.id), [pack.id])
+        XCTAssertEqual(profile.goalState, savedGoals)
+    }
+
+    func testCollectedFlowersMigrateToSignatureVariantsOnce() throws {
+        let suite = try XCTUnwrap(UserDefaults(suiteName: "gridbloom.garden.\(UUID().uuidString)"))
+        suite.set(true, forKey: "gridbloom.profile.starterSeeds")
+        suite.set(
+            [String(FlowerSpecies.tulip.rawValue), String(FlowerSpecies.rose.rawValue)],
+            forKey: "gridbloom.profile.collectedFlowers"
+        )
+
+        let first = PlayerProfile(defaults: suite)
+        let tulipKey = BloomCatalog.signature(.tulip).catalogKey
+        let roseKey = BloomCatalog.signature(.rose).catalogKey
+        XCTAssertEqual(first.collectedVariantIDs, Set([tulipKey, roseKey]))
+
+        first.collect(BloomVariant(species: .tulip, color: .white, rarity: .epic))
+        let second = PlayerProfile(defaults: suite)
+        XCTAssertTrue(second.collectedVariantIDs.contains(tulipKey))
+        XCTAssertTrue(second.collectedVariantIDs.contains(roseKey))
+        XCTAssertTrue(second.collectedVariantIDs.contains(
+            BloomVariant(species: .tulip, color: .white, rarity: .epic).catalogKey
+        ))
+        XCTAssertEqual(second.collectedVariantIDs.count, 3)
+    }
+
     func testBothMiniGamesGrantOneUltraPack() throws {
         let suite = try XCTUnwrap(UserDefaults(suiteName: "gridbloom.garden.\(UUID().uuidString)"))
         let profile = PlayerProfile(defaults: suite)
