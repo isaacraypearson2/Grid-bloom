@@ -322,8 +322,8 @@ final class GardenLoopTests: XCTestCase {
     @discardableResult
     private func tendUntilReady(_ profile: PlayerProfile, plotID: UUID, from plantedAt: Date) -> Date {
         var now = plantedAt
-        for _ in 0..<240 {
-            now = now.addingTimeInterval(8)
+        for _ in 0..<900 {
+            now = now.addingTimeInterval(30)
             _ = profile.waterPlot(plotID, now: now)
             if let plot = profile.gardenPlots.first(where: { $0.id == plotID }), plot.isReady(now: now) {
                 return now

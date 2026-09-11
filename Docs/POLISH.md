@@ -30,11 +30,14 @@ Line clears bloom **the matched species across the whole phone** — HUD include
 
 Tiles themselves show a **large cream flower glyph** (about 86% of the block) with a dark ink stroke and gold center, so matching reads as flower type + color — not a blank pastel square.
 
+Opening or first-collecting an **Ultra** seed/variant plays the same full-screen bloom (combo-5 juice) over the current screen — garden pack reveal, harvest, or album collect.
+
 ## Scan a real flower
 
 Home **Scan Flower**, or Album → **Scan**. Close returns to the menu.
 
-- Camera or Photo Library. Permission strings: `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` in `Info.plist`.
+- **Camera only.** Photo Library / upload was removed. `NSPhotoLibraryUsageDescription` is gone from `Info.plist` and the target build settings. Permission string: `NSCameraUsageDescription`.
+- The Simulator has no camera — Scan shows “Camera is required…” instead of falling back to Photos. Test scan on a device.
 - Classification is **heuristic-first and fully on-device**. A color+shape pass always names the bloom (Blush bloom, Golden bloom, Custom bloom, …). Vision’s built-in `VNClassifyImageRequest` upgrades that name when it recognizes a known species (tulip, rose, orchid, …). There is no cloud plant API.
 - The JPEG stamp is stored under Application Support on the phone. Photos never leave the device.
 - The circular/petal stamp becomes a playable Classic Garden tile (not Today’s Bloom, so UTC deals stay fair). Cap 12 scanned blooms; the 13th replaces the oldest.
@@ -42,21 +45,48 @@ Home **Scan Flower**, or Album → **Scan**. Close returns to the menu.
 
 ## Progression loop
 
-- **Petals** — 1 per cleared line, plus a small combo bonus. Fair sinks: Lotus (30) in the album, Desert Bloom (40) in the shop.
+- **Petals** — 1 per cleared line, plus a small combo bonus. Sinks are data-driven in `PetalCatalog.swift`: Garden mist (10), Dew burst (22), Organic pouch (90), Bee lantern (8), pot tints (12–20), plus Lotus (30) and Desert Bloom (40).
 - **Daily goals** — three UTC-stable chores (lines / combo / score / petal catch). Auto-claim, once per goal.
 - **Streak** — unchanged Today’s Bloom UTC streak.
-- **Album** — species → colors → rarity pips (C/R/E/U). Rank still follows species collected: Sprout → Gardener → Bloomkeeper → Master florist.
-- Rewarded **Bloom revive**, **New tray**, and Greenhouse **Watch to unlock** are unchanged and still player-initiated. Optional **Watch for fertilizer** uses the same rewarded unit, grants a charge you apply to a plant, and is never required to play Classic Garden.
+- **Album XP + collector tiers** — XP from collected variants (Common 8 / Rare 14 / Epic 24 / Ultra 40), +12 first-species bonus, +6 per camera scan. Tiers (not “super flower collector”):
+
+| Tier | XP |
+| --- | --- |
+| Sprout Scout | 0 |
+| Meadow Keeper | 80 |
+| Bloom Sage | 280 |
+| Greenhouse Legend | 800 |
+
+Album shows a progress bar and “N XP to next tier.” Fun facts sit on each unlocked species and on collected color rows (`BloomFacts` in `ScoreRewards.swift`).
+- Rewarded **Bloom revive**, **New tray**, and Greenhouse **Watch to unlock** are unchanged and still player-initiated. Optional **Watch for fertilizer** uses the same rewarded unit, grants a regular charge you apply to a plant, and is never required to play Classic Garden.
 
 ## Garden growing loop
 
-Home → **My Garden** (water / fertilizer) or **Seed Packs** (same screen). Fertilizer, unopened packs, and petal shop sit **above** the six beds so they are not below the fold. The column scrolls on small phones. New profiles start with tulip, daisy, and rose seeds.
+Home → **My Garden** (water / fertilizer) or **Seed Packs** (same screen). Fertilizer, Organic, unopened packs, petal shop, and pot tints sit **above** the six beds. The column scrolls on small phones. New profiles start with tulip, daisy, and rose seeds. Watering plays a droplet overlay on that bed.
 
-- Plant a seed; it grows in real time (Common 1 min, Rare 3, Epic 8, Ultra 15).
-- **Water / care** — each plant needs water on a fair timer (about half its grow time, minimum 45s). UI warns **Needs water** (yellow, with time until wilt), then **Wilting — water within …** (orange). Wilted plants pause growth. If still neglected they **die**, leave the bed empty, and have a ~22% chance to salvage a seed. Watering anytime while alive resets the care clock. Legacy plots (pre-watering save) keep remaining grow time and get a fresh water clock so they don’t instantly wilt.
-- **Fertilizer (ads)** — watching a rewarded ad adds a **fertilizer charge** (cap 5). Apply it to a growing plant: **2× growth for 2 hours**, not an instant skip. Each plant can accept fertilizer **at most once every 24 hours**. Cooldown and boost end times persist on the plot in `PlayerProfile`.
-- Harvest (when ready, even if thirsty/wilted) collects that **variant** (species + color + rarity), unlocks the species for Classic / its flower map, and pays a few petals.
-- Unlocks persist on `PlayerProfile` (plots, seed inventory, unopened packs, fertilizer charges, collected variants).
+### Grow times
+
+No instant grows. Fertilizer changes *rate*, never skips to done.
+
+| Rarity | Grow duration |
+| --- | --- |
+| Common | **12 min** |
+| Rare | **18 min** |
+| Epic | **30 min** |
+| Ultra | **48 min** |
+
+### Water / care
+
+Every plant needs water about **every 3 hours** (same clock for all rarities). After that: **20 min** yellow “Needs water”, then **40 min** orange wilt, then death. Wilted plants pause growth. Death empties the bed (~22% seed salvage). Watering anytime while alive resets the 3h clock. Watering animation: falling droplets + soil wash (`WateringFX`). Legacy plots still get a fresh water clock on load.
+
+### Fertilizer tiers
+
+| Kind | How to get | Boost | Duration | Per-plant cooldown | Cap |
+| --- | --- | --- | --- | --- | --- |
+| Regular | Rewarded ad | 2× | 2 hours | 24 hours | 5 |
+| Organic | Bee Trail (first win + every 3rd), score **2500+** once per UTC day, or 90 petals | 3× | 4 hours | 12 hours | 3 |
+
+Select Regular (watch) or Organic, then **Fertilize** on a bed. Dew burst (22 petals) is a separate 1.5× / 15 min on all growing plants.
 
 ## Flower maps (species stages)
 
@@ -74,18 +104,38 @@ Home → **Flower Maps**. Classic Garden is always playable from the big hero bu
 | Sakura Path | Sakura Grove | Unlock Sakura Grove (ad) |
 | Starfire Grove / Night Orchid Court / Sunburst Meadow | Sunflower / moonlight | Harvest that Ultra (seed pack) |
 
-Stage boards force their backdrop (you do not need to own the cosmetic to play the stage). Scanned photo tiles stay Classic-only. Ultra wipes work on Classic and on stages, never on Today’s Bloom.
+Stage boards force their backdrop (you do not need to own the cosmetic to play the stage). Scanned camera tiles stay Classic-only. Ultra wipes work on Classic and on stages, never on Today’s Bloom.
 
 ## Seed packs
 
-Fair gacha: a pack of rarity **X only grants seeds of that tier**, rolled across the species × color matrix (a Rare pack can drop Rare White Rose or Rare Blue Hydrangea, never a Common or Ultra). Clear Common / Rare / Epic / Ultra colors when you open it.
+Fair gacha: a pack of rarity **X only grants seeds of that tier**, rolled across the species × color matrix (a Rare pack can drop Rare White Rose or Rare Blue Hydrangea, never a Common or Ultra).
 
 | Pack | How to get | Contents |
 | --- | --- | --- |
-| Common | Petal Catch repeats, or 18 petals | 3 Common seeds |
-| Rare | First Petal Catch, Pattern Bloom repeats, or 40 petals | 2 Rare seeds |
-| Epic | First Pattern Bloom, or 70 petals | 1 Epic seed |
-| Ultra | Winning **both** side gardens (once), or 120 petals | 1 Ultra seed |
+| Common | Score 100, Petal Catch repeats, Bloom Match, Bee Trail repeats, or 18 petals | 3 Common seeds |
+| Rare | Score 500, first Petal Catch / Bee Trail, Pattern Bloom repeats, or 40 petals | 2 Rare seeds |
+| Epic | Score 1000, first Pattern Bloom, or 70 petals | 1 Epic seed |
+| Ultra | Score 2000 at **22%**, score 4000 guaranteed, winning **Petal Catch + Pattern Bloom** once, or 120 petals | 1 Ultra seed |
+
+### Score → pack table (run end)
+
+Classic, Today’s Bloom, and flower-map stages all use `ScorePackTable` in `ScoreRewards.swift`. Each rung is granted **at most once per run** (revive can unlock later rungs). Daily and Classic **do not share** a scoreboard entry.
+
+| Score | Pack | Chance |
+| --- | --- | --- |
+| 100 | Common | always |
+| 500 | Rare | always |
+| 1000 | Epic | always |
+| 2000 | Ultra | **22%** (rung still consumed on a miss) |
+| 2500 | Organic fertilizer | once per UTC day |
+| 4000 | Ultra | always (if 2000 missed) |
+
+## High scores and leaderboards
+
+- **Classic Garden** lifetime best: `gridbloom.best.classic` (unchanged key).
+- **Today’s Bloom** keeps a *per-UTC-day* best *and* a separate **lifetime Daily** best (`gridbloom.best.daily.lifetime`). Home chips: **Classic** / **Daily** (lifetime) / streak. Game-over on Daily also shows today’s run best vs all-time Daily.
+- Home trophy opens **Leaderboards**. Local bests always save. Friends: **coming soon** until Game Center boards exist.
+- Game Center (optional): `LeaderboardService` submits to `gridbloom.classic.highscore` and `gridbloom.daily.highscore` when `GKLocalPlayer` is authenticated. **Publisher setup:** App Store Connect → the Gridbloom app → Game Center → create those two GKLeaderboard IDs (integer, higher is better). Enable the Game Center capability on the App ID. No friends list ships until those IDs exist.
 
 ## Ultra abilities
 
@@ -93,18 +143,32 @@ Any **Ultra** variant (Ultra Pink Tulip, Ultra Amber Starfire, …) wipes the re
 
 ## Mini-games
 
-Home → **Mini-games** (earn seed packs):
+Home → **Mini-games** (earn seed packs / petals / Organic):
 
 1. **Petal Catch** — tap falling petals, catch 10 in 22s. First win: **Orchid** + Rare pack. Repeats: Common pack.
 2. **Pattern Bloom** — repeat the flashed flowers for 3 rounds. First win: **Peony**, **Glasshouse**, Epic pack. Repeats: Rare pack.
+3. **Bee Trail** *(new)* — follow the bee’s visit order under a timer. First win: Rare pack + **Organic**. Repeats: Common pack; Organic every 3rd win. Optional **Bee lantern** (8 petals) highlights the next bloom.
+4. **Bloom Match** *(new)* — flip pairs of color variants (6 pairs, 8 misses). First win: Common pack. Repeats: Common, or Rare if mismatches ≤ 2.
 
-Winning both games once also grants a single **Ultra** pack. Repeats still pay a small petal bonus.
+Winning Petal Catch + Pattern Bloom once also grants a single **Ultra** pack. Repeats still pay a small petal bonus.
+
+## Music
+
+Procedural 8-second looping WAVs generated in `GardenMusic.swift` — **no bundled stems**. Category `.ambient` (hardware silent switch + mix with others).
+
+| Bed | Where | Tone |
+| --- | --- | --- |
+| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards | Light pentatonic pad (C–E–G–C) |
+| Garden | **My Garden** only | Lower, slower drone |
+| Off | Match play, scan, and the four mini-games | SFX only |
+
+Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off and the silent switch. Toggle Music after mute to restart the current bed.
 
 ## UI polish
 
 - First-run onboarding (7 short pages, skippable) plus in-game “Drag a flower…” hint.
-- Settings: How to play, haptics, sound, color-distinct pieces, Reduce Motion.
-- Home is a **scrollable** screen. Shop / Settings stay as top icons. Destinations in order:
+- Settings: How to play, haptics, sound, **music**, color-distinct pieces, Reduce Motion.
+- Home is a **scrollable** screen. Shop / **Leaderboards** / Settings stay as top icons. Destinations in order:
   1. **Classic Garden** (hero — mixed board, always free)
   2. **Flower Maps** / **My Garden** / **Seed Packs** / **Mini-games** / **Album** / **Scan Flower** (2-column grid)
   3. **Today’s Bloom** (UTC daily)
@@ -113,19 +177,19 @@ Winning both games once also grants a single **Ultra** pack. Repeats still pay a
 ## How to test in Xcode Simulator
 
 1. Open `Gridbloom.xcodeproj` in Xcode 16+ (iOS 16+ iPhone simulator).
-2. **Product → Test (⌘U)** — includes the species × color × rarity catalog, flower-map unlocks, garden watering/wilt/death, fertilizer 2×/24h cooldown, seed-pack rarity, Ultra grid wipe, daily goals, Pattern Bloom, Glasshouse / Desert Bloom unlocks. Ads still use `MockRewardedAdService`.
+2. **Product → Test (⌘U)** — includes grow/water timers, score→pack table, Classic vs Daily boards, collector XP tiers, petal offers, Organic fertilizer, Bee Trail / Bloom Match rules, Ultra obtain flag, procedural music WAV render. Ads still use `MockRewardedAdService`.
 3. **Product → Run (⌘R)** on an iPhone simulator.
-4. Skip or finish onboarding. Tap **Classic Garden**. Pieces should show a large flower on each colored block. Clearing a line should flash that **species across the whole phone** (HUD included, bigger with combo), then let you keep playing.
-5. Home **Scan Flower** or Album → **Scan**. Simulator: use Photo Library (camera is limited; grant Photos if the camera fallback asks). Pick any colorful image. Plant it; it should show in the album. Start Classic Garden — the opening tray can already show that stamp. Today’s Bloom should not deal scanned tiles. A dull/gray photo is named **Custom bloom**. Close Scan returns to the menu.
-6. Home → **Album**. Each species shows color rows and C/R/E/U pips. Starters collect as you place them. Buy Lotus if you have 30 petals (play a bit, or complete daily goals).
-7. Home → **Mini-games** → Petal Catch. Catch 10 petals; album should show Orchid and **Seed Packs** / **My Garden** should have a Rare pack. Pattern Bloom: watch, repeat; Glasshouse + Epic pack. Winning **both** should add one Ultra pack (once).
+4. Skip or finish onboarding. Tap **Classic Garden**. Pieces should show a large flower on each colored block. Clearing a line should flash that **species across the whole phone** (HUD included, bigger with combo), then let you keep playing. End a run at 100+ and confirm a Common pack on game over (500 Rare, 1000 Epic). Classic best and Daily best on Home must be different chips.
+5. Home **Scan Flower** or Album → **Scan**. Simulator has **no camera** and **no photo library fallback** — you should see the camera-required message. On a device, grant Camera, scan a bloom, plant it; Classic can deal it, Today’s Bloom must not.
+6. Home → **Album**. Confirm Sprout Scout → Meadow Keeper progress, XP bar, and a fun fact on unlocked species. Starters collect as you place them. Buy Lotus if you have 30 petals.
+7. Home → **Mini-games**: Petal Catch (Orchid + Rare), Pattern Bloom (Peony + Glasshouse + Epic), **Bee Trail** (Organic + Rare), **Bloom Match** (Common). Winning Petal Catch + Pattern Bloom still adds one Ultra pack (once). Open that Ultra pack — a full-screen Ultra bloom should play.
 8. Greenhouse: Meadow Clay is free. Glasshouse **Use** after Pattern Bloom. Desert Bloom **40 petals**. Sakura / Night / Sunflower still **Watch to unlock** (DEBUG `forceGoogleTestAds` if AdMob isn’t filling).
-9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads.
-10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this).
-11. Settings → Reduce Motion: full-screen bloom is a brief tint; tiles should not shake / punch / spray petals.
-12. Home → **My Garden** or **Seed Packs**: fertilizer, packs, and petal shop should sit above the beds. Plant a starter seed. **Water** when the bed turns yellow (“Needs water”) — don’t wait for orange wilt. Harvest when ready. Open a seed pack and confirm the rarity banner matches the pack tier.
-13. Buy a Common pack for 18 petals (play a bit first). **Watch for fertilizer** (optional ad) → apply **Fertilize** on a growing plant: it should show 2× for 2 hours. A second fertilize on that plant should be blocked until 24h. Classic Garden must remain playable with an empty garden / no ads.
-14. Leave a plant unwatered past the wilt warning — it should die, empty the bed, and sometimes return a salvaged seed. Open the Ultra pack (from both mini-games, or 120 petals). Plant, water, harvest that Ultra variant. In **Classic** or a flower map (not Today’s Bloom), complete a line that is mostly that Ultra bloom — the rest of the board should wipe with a GRID bloom.
+9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads. Revive after 100 points should not grant a second Common pack; crossing 500 after revive should grant Rare.
+10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this). Its high score must not overwrite Classic’s.
+11. Settings → Music off: home/garden loops stop. Sound off: SFX and music stop. Silent switch: both should duck (`.ambient`). Reduce Motion: full-screen bloom is a brief tint; watering FX is quieter.
+12. Home → **My Garden**: plant a starter. Grow copy should show **12:00** (Common), not 1:00. **Water** plays droplets. Beds stay hydrated for ~3 hours. **Watch for fertilizer** still 2×/2h/24h. Earn Organic (Bee Trail) and apply — 3×/4h/12h. Spend petals on mist / dew / a pot tint; pot lip color should change.
+13. Trophy on Home → Leaderboards. Classic and Daily cards are separate. Friends copy is “coming soon” unless Game Center is signed in and the two board IDs exist in App Store Connect.
+14. Leave a plant unwatered past the 3h + 20m + 40m wilt window — it should die, empty the bed, and sometimes return a salvaged seed. Harvest an Ultra variant (or open an Ultra pack) and confirm the full-screen Ultra bloom. In **Classic** or a flower map (not Today’s Bloom), complete a line that is mostly that Ultra bloom — the rest of the board should wipe with a GRID bloom.
 15. Place a tulip in Classic, then open **Flower Maps** — **Tulip Walk** should unlock and deal only tulips on the meadow board. Today’s Bloom should still ignore extra colors/rarities.
 
 AdMob / StoreKit paths were not removed. `Products.storekit` remains unused by the shop. Restore still imports leftover IAP entitlements.

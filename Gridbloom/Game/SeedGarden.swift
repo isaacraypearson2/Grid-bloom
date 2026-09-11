@@ -62,13 +62,13 @@ enum SeedRarity: String, Codable, CaseIterable, Identifiable, Comparable, Sendab
         }
     }
 
-    /// Real-time grow duration. Fertilizer can double the rate for 2 hours; Classic Garden never waits on this.
+    /// Real-time grow duration. Baseline ~12–15 min; rarer seeds take longer. No instant grows.
     var growDuration: TimeInterval {
         switch self {
-        case .common: return 60
-        case .rare: return 180
-        case .epic: return 480
-        case .ultra: return 900
+        case .common: return 12 * 60
+        case .rare: return 18 * 60
+        case .epic: return 30 * 60
+        case .ultra: return 48 * 60
         }
     }
 
@@ -118,10 +118,14 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
     var lastTickAt: Date
     var baseDuration: TimeInterval
     var workRemaining: TimeInterval
-    /// 2× growth until this instant.
+    /// Growth boost until this instant.
     var fertilizerUntil: Date?
-    /// Next time this plot may accept fertilizer (24h cooldown).
+    /// Next time this plot may accept fertilizer.
     var fertilizerAvailableAt: Date?
+    /// `regular` (ad, 2×/2h) or `organic` (3×/4h).
+    var fertilizerKindRaw: String?
+    /// Petal dew burst 1.5× until this instant.
+    var dewUntil: Date?
 
     var species: FlowerSpecies {
         FlowerSpecies(rawValue: speciesRaw) ?? .tulip
@@ -169,8 +173,17 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         return .growing
     }
 
+    var fertilizerKind: FertilizerKind {
+        FertilizerKind(rawValue: fertilizerKindRaw ?? "") ?? .regular
+    }
+
     func isFertilizerActive(now: Date) -> Bool {
         guard let until = fertilizerUntil else { return false }
+        return now < until
+    }
+
+    func isDewActive(now: Date) -> Bool {
+        guard let until = dewUntil else { return false }
         return now < until
     }
 
@@ -191,7 +204,12 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         if date >= wiltAt() { return 0 }
         var rate = 1.0
         if date >= thirstyAt() { rate *= 0.5 }
-        if let until = fertilizerUntil, date < until { rate *= 2 }
+        if let until = fertilizerUntil, date < until {
+            rate *= fertilizerKind.multiplier
+        }
+        if let dew = dewUntil, date < dew {
+            rate *= SeedGardenRules.dewMultiplier
+        }
         return rate
     }
 
@@ -246,12 +264,14 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
     private func nextRateChange(after date: Date) -> Date? {
         var marks: [Date] = [thirstyAt(), wiltAt(), deathAt()]
         if let until = fertilizerUntil { marks.append(until) }
+        if let dew = dewUntil { marks.append(dew) }
         return marks.filter { $0 > date }.min()
     }
 
     enum CodingKeys: String, CodingKey {
         case id, slot, speciesRaw, colorRaw, rarityRaw, plantedAt, lastWateredAt, lastTickAt
         case baseDuration, workRemaining, fertilizerUntil, fertilizerAvailableAt
+        case fertilizerKindRaw, dewUntil
         case finishesAt, boosted
     }
 
@@ -267,7 +287,9 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         baseDuration: TimeInterval,
         workRemaining: TimeInterval,
         fertilizerUntil: Date? = nil,
-        fertilizerAvailableAt: Date? = nil
+        fertilizerAvailableAt: Date? = nil,
+        fertilizerKindRaw: String? = nil,
+        dewUntil: Date? = nil
     ) {
         self.id = id
         self.slot = slot
@@ -281,6 +303,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         self.workRemaining = workRemaining
         self.fertilizerUntil = fertilizerUntil
         self.fertilizerAvailableAt = fertilizerAvailableAt
+        self.fertilizerKindRaw = fertilizerKindRaw
+        self.dewUntil = dewUntil
     }
 
     init(from decoder: Decoder) throws {
@@ -312,6 +336,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         }
         fertilizerUntil = try c.decodeIfPresent(Date.self, forKey: .fertilizerUntil)
         fertilizerAvailableAt = try c.decodeIfPresent(Date.self, forKey: .fertilizerAvailableAt)
+        fertilizerKindRaw = try c.decodeIfPresent(String.self, forKey: .fertilizerKindRaw)
+        dewUntil = try c.decodeIfPresent(Date.self, forKey: .dewUntil)
         if (try c.decodeIfPresent(Bool.self, forKey: .boosted)) == true {
             workRemaining = 0
         }
@@ -331,6 +357,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         try c.encode(workRemaining, forKey: .workRemaining)
         try c.encodeIfPresent(fertilizerUntil, forKey: .fertilizerUntil)
         try c.encodeIfPresent(fertilizerAvailableAt, forKey: .fertilizerAvailableAt)
+        try c.encodeIfPresent(fertilizerKindRaw, forKey: .fertilizerKindRaw)
+        try c.encodeIfPresent(dewUntil, forKey: .dewUntil)
     }
 }
 
@@ -357,20 +385,32 @@ enum SeedGardenRules {
     static let fertilizerDuration: TimeInterval = 2 * 60 * 60
     static let fertilizerCooldown: TimeInterval = 24 * 60 * 60
     static let fertilizerChargeCap = 5
+    static let organicDuration: TimeInterval = 4 * 60 * 60
+    static let organicCooldown: TimeInterval = 12 * 60 * 60
+    static let organicChargeCap = 3
+    static let dewDuration: TimeInterval = 15 * 60
+    static let dewMultiplier = 1.5
     static let salvageChance = 0.22
+    /// Care clock is about 3 hours for every rarity.
+    static let waterInterval: TimeInterval = 3 * 60 * 60
+    static let thirstyGraceInterval: TimeInterval = 20 * 60
+    static let wiltGraceInterval: TimeInterval = 40 * 60
 
     static func waterEvery(for rarity: SeedRarity) -> TimeInterval {
-        max(45, rarity.growDuration * 0.5)
+        _ = rarity
+        return waterInterval
     }
 
     /// Yellow warning window after water is due, before wilt.
     static func thirstyGrace(for rarity: SeedRarity) -> TimeInterval {
-        max(20, rarity.growDuration * 0.25)
+        _ = rarity
+        return thirstyGraceInterval
     }
 
     /// Orange wilt window; water still saves. After this the plot dies.
     static func wiltGrace(for rarity: SeedRarity) -> TimeInterval {
-        max(30, rarity.growDuration * 0.35)
+        _ = rarity
+        return wiltGraceInterval
     }
 
     static func salvagesSeed(plotID: UUID) -> Bool {

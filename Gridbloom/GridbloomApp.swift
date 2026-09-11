@@ -19,6 +19,7 @@ struct GridbloomApp: App {
                 .environmentObject(profile)
                 .onAppear {
                     SoundPlayer.shared.prepareSession()
+                    GardenMusic.shared.play(.home)
                 }
                 .task {
                     await cosmetics.load()

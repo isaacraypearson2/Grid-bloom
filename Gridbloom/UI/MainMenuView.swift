@@ -30,6 +30,7 @@ struct MainMenuView: View {
     var theme: BoardTheme
     var classicBest: Int
     var dailyBest: Int
+    var dailyToday: Int
     var utcDay: String
     var streak: Int
     var playedToday: Bool
@@ -50,6 +51,7 @@ struct MainMenuView: View {
     var onSeedPacks: () -> Void
     var onShop: () -> Void
     var onSettings: () -> Void
+    var onLeaderboard: () -> Void
 
     var body: some View {
         ZStack {
@@ -59,6 +61,7 @@ struct MainMenuView: View {
                     HStack {
                         IconCircleButton(systemName: "bag", label: "Shop", theme: theme, action: onShop)
                         Spacer()
+                        IconCircleButton(systemName: "trophy.fill", label: "Leaderboards", theme: theme, action: onLeaderboard)
                         IconCircleButton(systemName: "slider.horizontal.3", label: "Settings", theme: theme, action: onSettings)
                     }
 
@@ -87,8 +90,8 @@ struct MainMenuView: View {
                             onSeedPacks
                         )
                         destButton("Mini-games", "Earn seed packs", "sparkles", Color(red: 0.58, green: 0.62, blue: 0.82), onMiniGames)
-                        destButton("Album", "Species · colors · rarities", "book.fill", Color(red: 0.62, green: 0.48, blue: 0.72), onAlbum)
-                        destButton("Scan Flower", "Photo → playable tile", "camera.fill", Color(red: 0.42, green: 0.58, blue: 0.72), onScanFlower)
+                        destButton("Album", "XP · collector tiers", "book.fill", Color(red: 0.62, green: 0.48, blue: 0.72), onAlbum)
+                        destButton("Scan Flower", "Camera scan only", "camera.fill", Color(red: 0.42, green: 0.58, blue: 0.72), onScanFlower)
                     }
 
                     Button(action: onPlayDaily) {
@@ -101,10 +104,13 @@ struct MainMenuView: View {
                     .buttonStyle(GardenButtonStyle(fill: GardenPalette.dailyFill))
 
                     HStack(spacing: 12) {
-                        scoreChip(title: "Best", value: "\(classicBest)")
-                        scoreChip(title: "Today", value: "\(dailyBest)")
+                        scoreChip(title: "Classic", value: "\(classicBest)")
+                        scoreChip(title: "Daily", value: "\(dailyBest)")
                         scoreChip(title: "Streak", value: streak == 0 ? "—" : "\(streak)d")
                     }
+                    Text("Today’s Bloom run  \(dailyToday)   ·   UTC \(utcDay)")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundColor(theme.inkSoft)
 
                     dailyGoalsCard
 

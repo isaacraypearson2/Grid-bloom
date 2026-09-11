@@ -9,6 +9,8 @@ struct GardenView: View {
     @State private var plantSlot: Int?
     @State private var adMessage: String?
     @State private var toast: String?
+    @State private var wateringSlot: Int?
+    @State private var fertilizeKind: FertilizerKind = .regular
 
     var body: some View {
         ZStack {
@@ -19,7 +21,7 @@ struct GardenView: View {
                         Text("My garden")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("Water so they don’t wilt. Ads grant fertilizer (2× for 2 hours), not an instant skip. Classic Garden never waits on this.")
+                        Text("Water about every 3 hours so they don’t wilt. Regular fertilizer is an ad (2× for 2 hours). Organic is stronger (3× for 4 hours, 12h cooldown). Classic Garden never waits on this.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -30,8 +32,11 @@ struct GardenView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         fertilizerBar
+                        organicBar
                         packsRow
                         shopRow
+                        petalOffers
+                        potTintRow
 
                         TimelineView(.periodic(from: .now, by: 1)) { timeline in
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -45,7 +50,7 @@ struct GardenView: View {
                             presentGardenEvent()
                         }
 
-                        Text("\(profile.petals) petals  ·  \(profile.inventorySeeds.reduce(0) { $0 + $1.1 }) seeds  ·  \(profile.fertilizerCharges) fertilizer")
+                        Text("\(profile.petals) petals  ·  \(profile.inventorySeeds.reduce(0) { $0 + $1.1 }) seeds  ·  \(profile.fertilizerCharges) fertilizer  ·  \(profile.organicFertilizerCharges) organic")
                             .font(.system(.caption, design: .rounded).weight(.semibold))
                             .foregroundColor(theme.inkSoft)
 
@@ -75,6 +80,19 @@ struct GardenView: View {
             profile.tickGarden()
             presentGardenEvent()
         }
+        .onChange(of: profile.lastWateredPlotID) { id in
+            guard let id, let plot = profile.gardenPlots.first(where: { $0.id == id }) else { return }
+            wateringSlot = plot.slot
+            Haptics.light()
+            SoundPlayer.shared.place()
+            let hold = AppSettings.shared.prefersReducedMotion ? 0.35 : 1.05
+            DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+                if wateringSlot == plot.slot {
+                    wateringSlot = nil
+                    profile.clearWateredPlot()
+                }
+            }
+        }
     }
 
     private var plantSlotBinding: Binding<IdentifiedSlot?> {
@@ -96,9 +114,10 @@ struct GardenView: View {
             }
             Spacer()
             Button {
+                fertilizeKind = .regular
                 watchForFertilizer()
             } label: {
-                Text(profile.fertilizerCharges >= SeedGardenRules.fertilizerChargeCap ? "Full" : "Watch for fertilizer")
+                Text(profile.fertilizerCharges >= SeedGardenRules.fertilizerChargeCap ? "Full" : (fertilizeKind == .regular ? "Watch · selected" : "Watch for fertilizer"))
                     .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
@@ -112,6 +131,111 @@ struct GardenView: View {
         .padding(12)
         .background(theme.cream.opacity(0.82))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var organicBar: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Organic fertilizer")
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundColor(theme.inkSoft)
+                Text("\(profile.organicFertilizerCharges) charge\(profile.organicFertilizerCharges == 1 ? "" : "s")")
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                    .foregroundColor(theme.ink)
+                Text("3× for 4 hours · 12h cooldown. Earn from Bee Trail or a 2500+ run.")
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+            }
+            Spacer()
+            Button {
+                fertilizeKind = .organic
+                toast = "Organic selected — tap Fertilize on a bed"
+            } label: {
+                Text(fertilizeKind == .organic ? "Selected" : "Use Organic")
+                    .font(.system(.caption, design: .rounded).weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(profile.organicFertilizerCharges == 0 ? theme.inkSoft : FertilizerKind.organic.fill)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(profile.organicFertilizerCharges == 0)
+        }
+        .padding(12)
+        .background(theme.cream.opacity(0.82))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var petalOffers: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Spend petals")
+                .font(.system(.headline, design: .rounded).weight(.bold))
+                .foregroundColor(theme.ink)
+            Text("Mists, dew, pot tints, Bee lanterns, Organic pouches.")
+                .font(.system(.caption, design: .rounded))
+                .foregroundColor(theme.inkSoft)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(PetalOffer.allCases) { offer in
+                        Button {
+                            if profile.redeem(offer) {
+                                toast = profile.lastPetalOfferMessage ?? offer.title
+                                Haptics.success()
+                            } else {
+                                toast = profile.lastPetalOfferMessage ?? "Need \(offer.cost) petals"
+                                Haptics.error()
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Image(systemName: offer.systemImage)
+                                Text(offer.title)
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                Text("\(offer.cost) petals")
+                                    .font(.system(size: 11, design: .rounded))
+                            }
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .frame(width: 118, alignment: .leading)
+                            .background(theme.accent)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var potTintRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Pot tint")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundColor(theme.inkSoft)
+            HStack(spacing: 8) {
+                ForEach(PotTint.allCases) { tint in
+                    Button {
+                        if profile.ownsPot(tint) {
+                            profile.selectPotTint(tint)
+                            toast = "\(tint.title) pots"
+                        } else {
+                            toast = "Buy \(tint.title) with petals"
+                            Haptics.error()
+                        }
+                    } label: {
+                        Circle()
+                            .fill(tint.fill)
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Circle().stroke(profile.selectedPotTint == tint ? theme.ink : Color.clear, lineWidth: 2)
+                            )
+                            .opacity(profile.ownsPot(tint) ? 1 : 0.35)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(tint.title)
+                }
+            }
+        }
     }
 
     private var packsRow: some View {
@@ -197,13 +321,26 @@ struct GardenView: View {
         let plot = resolvedPlot(slot: slot, now: now)
         return VStack(spacing: 6) {
             if let plot {
-                BloomMark(size: 26, petal: plot.careStage(now: now) == .wilted ? theme.inkSoft : plot.bloom.swiftTint)
-                    .opacity(plot.careStage(now: now) == .wilted ? 0.55 : 1)
+                ZStack {
+                    BloomMark(size: 26, petal: plot.careStage(now: now) == .wilted ? theme.inkSoft : plot.bloom.swiftTint)
+                        .opacity(plot.careStage(now: now) == .wilted ? 0.55 : 1)
+                    if wateringSlot == slot {
+                        WateringFX(accent: theme.accent, reduced: AppSettings.shared.prefersReducedMotion)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .frame(height: 40)
                 Text(plot.bloom.title)
                     .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundColor(theme.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                Text(BloomFacts.speciesFact(plot.species))
+                    .font(.system(size: 9, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
                 if let warning = plot.warningCopy(now: now) {
                     Text(warning)
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -211,9 +348,13 @@ struct GardenView: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if plot.isFertilizerActive(now: now) {
-                    Text("2× fertilizer")
+                    Text("\(plot.fertilizerKind.multiplier, specifier: "%g")× \(plot.fertilizerKind.title.lowercased())")
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundColor(Color(red: 0.46, green: 0.62, blue: 0.28))
+                        .foregroundColor(plot.fertilizerKind.fill)
+                } else if plot.isDewActive(now: now) {
+                    Text("Dew burst")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color(red: 0.36, green: 0.58, blue: 0.72))
                 } else {
                     Text(plot.bloom.rarity.title)
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -249,7 +390,7 @@ struct GardenView: View {
                 HStack(spacing: 6) {
                     Button("Water") {
                         if profile.waterPlot(plot.id, now: now) {
-                            toast = "Watered"
+                            toast = "Watered — next drink in about 3 hours"
                             Haptics.light()
                         }
                     }
@@ -289,9 +430,16 @@ struct GardenView: View {
                 .clipShape(Capsule())
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 168)
+        .frame(maxWidth: .infinity, minHeight: 196)
         .padding(10)
         .background(plotBackground(live: plot, now: now))
+        .overlay(alignment: .bottom) {
+            Capsule()
+                .fill(profile.selectedPotTint.fill)
+                .frame(height: 6)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+        }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -308,7 +456,8 @@ struct GardenView: View {
     }
 
     private func canFertilize(_ plot: GardenPlot, now: Date) -> Bool {
-        profile.fertilizerCharges > 0 && plot.canAcceptFertilizer(now: now)
+        let charges = fertilizeKind == .organic ? profile.organicFertilizerCharges : profile.fertilizerCharges
+        return charges > 0 && plot.canAcceptFertilizer(now: now)
     }
 
     private func applyFertilizer(_ plot: GardenPlot, now: Date) {
@@ -322,13 +471,14 @@ struct GardenView: View {
             Haptics.error()
             return
         }
-        if profile.fertilizerCharges <= 0 {
-            toast = "Watch an ad for a fertilizer charge"
+        let charges = fertilizeKind == .organic ? profile.organicFertilizerCharges : profile.fertilizerCharges
+        if charges <= 0 {
+            toast = fertilizeKind == .organic ? "Win Bee Trail or score 2500+ for Organic" : "Watch an ad for a fertilizer charge"
             Haptics.error()
             return
         }
-        if profile.applyFertilizer(plot.id, now: now) {
-            toast = "2× growth for 2 hours"
+        if profile.applyFertilizer(plot.id, kind: fertilizeKind, now: now) {
+            toast = fertilizeKind == .organic ? "Organic 3× for 4 hours" : "2× growth for 2 hours"
             Haptics.success()
         } else {
             Haptics.error()
@@ -355,7 +505,7 @@ struct GardenView: View {
                                 Text(bloom.title)
                                     .font(.system(.headline, design: .rounded).weight(.bold))
                                     .foregroundColor(theme.ink)
-                                Text("\(bloom.rarity.title)  ·  \(SeedGardenRules.formatRemaining(bloom.rarity.growDuration))  ·  water often")
+                Text("\(bloom.rarity.title)  ·  \(SeedGardenRules.formatRemaining(bloom.rarity.growDuration))  ·  water every 3h")
                                     .font(.system(.caption, design: .rounded))
                                     .foregroundColor(bloom.rarity.ink)
                             }

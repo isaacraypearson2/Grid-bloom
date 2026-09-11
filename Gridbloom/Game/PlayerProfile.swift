@@ -27,7 +27,16 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var lastPackReveal: PackReveal?
     @Published private(set) var lastHarvested: FlowerSpecies?
     @Published private(set) var fertilizerCharges: Int
+    @Published private(set) var organicFertilizerCharges: Int
+    @Published private(set) var ownedPotTintIDs: Set<String>
+    @Published private(set) var selectedPotTintID: String
+    @Published private(set) var beeHints: Int
+    @Published private(set) var miniGameWinCounts: [String: Int]
     @Published private(set) var lastGardenEvent: GardenEvent?
+    @Published private(set) var lastUltraBloom: BloomVariant?
+    @Published private(set) var lastWateredPlotID: UUID?
+    @Published private(set) var lastRunRewards: RunScoreRewards?
+    @Published private(set) var lastPetalOfferMessage: String?
 
     private let defaults: UserDefaults
 
@@ -51,6 +60,12 @@ final class PlayerProfile: ObservableObject {
         static let starterSeeds = "gridbloom.profile.starterSeeds"
         static let ultraMilestone = "gridbloom.profile.ultraMilestone"
         static let fertilizer = "gridbloom.profile.fertilizerCharges"
+        static let organic = "gridbloom.profile.organicFertilizer"
+        static let potTints = "gridbloom.profile.potTints"
+        static let selectedPot = "gridbloom.profile.selectedPot"
+        static let beeHints = "gridbloom.profile.beeHints"
+        static let miniWins = "gridbloom.profile.miniGameWins"
+        static let organicScoreDay = "gridbloom.profile.organicScoreDay"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -93,7 +108,21 @@ final class PlayerProfile: ObservableObject {
         lastPackReveal = nil
         lastHarvested = nil
         lastGardenEvent = nil
+        lastUltraBloom = nil
+        lastWateredPlotID = nil
+        lastRunRewards = nil
+        lastPetalOfferMessage = nil
         fertilizerCharges = defaults.integer(forKey: Keys.fertilizer)
+        organicFertilizerCharges = defaults.integer(forKey: Keys.organic)
+        beeHints = defaults.integer(forKey: Keys.beeHints)
+        ownedPotTintIDs = Set(defaults.stringArray(forKey: Keys.potTints) ?? [PotTint.terracotta.rawValue])
+        selectedPotTintID = defaults.string(forKey: Keys.selectedPot) ?? PotTint.terracotta.rawValue
+        if let winData = defaults.data(forKey: Keys.miniWins),
+           let counts = try? JSONDecoder().decode([String: Int].self, from: winData) {
+            miniGameWinCounts = counts
+        } else {
+            miniGameWinCounts = [:]
+        }
         if let data = defaults.data(forKey: Keys.goals),
            let decoded = try? JSONDecoder().decode(DailyGoalProgress.self, from: data) {
             goalState = decoded
@@ -138,7 +167,19 @@ final class PlayerProfile: ObservableObject {
     }
 
     var gardenRank: GardenRank {
-        GardenRank.from(collectedCount: collectedFlowers.count + customBlooms.count)
+        GardenRank.from(xp: albumXP)
+    }
+
+    var albumXP: Int {
+        CollectorProgress.totalXP(
+            variants: collectedVariantIDs,
+            species: collectedFlowers,
+            scans: customBlooms.count
+        )
+    }
+
+    var selectedPotTint: PotTint {
+        PotTint(rawValue: selectedPotTintID) ?? .terracotta
     }
 
     var todayGoals: [DailyGoal] {
@@ -278,6 +319,9 @@ final class PlayerProfile: ObservableObject {
         }
         guard collectedVariantIDs.insert(bloom.catalogKey).inserted else { return }
         defaults.set(Array(collectedVariantIDs).sorted(), forKey: Keys.collectedVariants)
+        if bloom.rarity == .ultra {
+            lastUltraBloom = bloom
+        }
     }
 
     func addPetals(_ amount: Int) {
@@ -432,7 +476,14 @@ final class PlayerProfile: ObservableObject {
         }
         let reveal = PackReveal(rarity: pack.rarity, seeds: seeds)
         lastPackReveal = reveal
+        if pack.rarity == .ultra || seeds.contains(where: { $0.rarity == .ultra }) {
+            lastUltraBloom = seeds.first(where: { $0.rarity == .ultra }) ?? seeds.first
+        }
         return reveal
+    }
+
+    func clearUltraBloom() {
+        lastUltraBloom = nil
     }
 
     func clearPackReveal() {
@@ -476,7 +527,22 @@ final class PlayerProfile: ObservableObject {
         plot.lastWateredAt = now
         gardenPlots[index] = plot
         persistPlots()
+        lastWateredPlotID = id
         return true
+    }
+
+    func clearWateredPlot() {
+        lastWateredPlotID = nil
+    }
+
+    @discardableResult
+    func waterAllPlots(now: Date = Date()) -> Int {
+        tickGarden(now: now)
+        var count = 0
+        for plot in gardenPlots where !plot.isDead(now: now) {
+            if waterPlot(plot.id, now: now) { count += 1 }
+        }
+        return count
     }
 
     @discardableResult
@@ -488,20 +554,57 @@ final class PlayerProfile: ObservableObject {
     }
 
     @discardableResult
+    func grantOrganicFertilizer(count: Int = 1) -> Int {
+        guard count > 0 else { return organicFertilizerCharges }
+        organicFertilizerCharges = min(SeedGardenRules.organicChargeCap, organicFertilizerCharges + count)
+        defaults.set(organicFertilizerCharges, forKey: Keys.organic)
+        return organicFertilizerCharges
+    }
+
+    @discardableResult
     func applyFertilizer(_ id: UUID, now: Date = Date()) -> Bool {
+        applyFertilizer(id, kind: .regular, now: now)
+    }
+
+    @discardableResult
+    func applyFertilizer(_ id: UUID, kind: FertilizerKind, now: Date = Date()) -> Bool {
         tickGarden(now: now)
-        guard fertilizerCharges > 0 else { return false }
         guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return false }
         var plot = gardenPlots[index]
         plot.tick(now: now)
         guard plot.canAcceptFertilizer(now: now) else { return false }
-        fertilizerCharges -= 1
-        defaults.set(fertilizerCharges, forKey: Keys.fertilizer)
-        plot.fertilizerUntil = now.addingTimeInterval(SeedGardenRules.fertilizerDuration)
-        plot.fertilizerAvailableAt = now.addingTimeInterval(SeedGardenRules.fertilizerCooldown)
+        switch kind {
+        case .regular:
+            guard fertilizerCharges > 0 else { return false }
+            fertilizerCharges -= 1
+            defaults.set(fertilizerCharges, forKey: Keys.fertilizer)
+        case .organic:
+            guard organicFertilizerCharges > 0 else { return false }
+            organicFertilizerCharges -= 1
+            defaults.set(organicFertilizerCharges, forKey: Keys.organic)
+        }
+        plot.fertilizerKindRaw = kind.rawValue
+        plot.fertilizerUntil = now.addingTimeInterval(kind.duration)
+        plot.fertilizerAvailableAt = now.addingTimeInterval(kind.cooldown)
         gardenPlots[index] = plot
         persistPlots()
         return true
+    }
+
+    @discardableResult
+    func applyDewBurst(now: Date = Date()) -> Int {
+        tickGarden(now: now)
+        var count = 0
+        for index in gardenPlots.indices {
+            var plot = gardenPlots[index]
+            plot.tick(now: now)
+            guard !plot.isDead(now: now), plot.workRemaining > 0.01, plot.careStage(now: now) != .wilted else { continue }
+            plot.dewUntil = now.addingTimeInterval(SeedGardenRules.dewDuration)
+            gardenPlots[index] = plot
+            count += 1
+        }
+        if count > 0 { persistPlots() }
+        return count
     }
 
     @discardableResult
@@ -546,6 +649,108 @@ final class PlayerProfile: ObservableObject {
 
     func clearGardenEvent() {
         lastGardenEvent = nil
+    }
+
+    func miniGameWins(_ kind: MiniGameKind) -> Int {
+        miniGameWinCounts[kind.rawValue] ?? 0
+    }
+
+    /// Returns true on the first recorded win of this side garden.
+    @discardableResult
+    func recordMiniGameWin(_ kind: MiniGameKind) -> Bool {
+        let current = miniGameWins(kind)
+        miniGameWinCounts[kind.rawValue] = current + 1
+        persistMiniWins()
+        return current == 0
+    }
+
+    func consumeBeeHint() -> Bool {
+        guard beeHints > 0 else { return false }
+        beeHints -= 1
+        defaults.set(beeHints, forKey: Keys.beeHints)
+        return true
+    }
+
+    func selectPotTint(_ tint: PotTint) {
+        guard ownedPotTintIDs.contains(tint.rawValue) || tint.isFree else { return }
+        selectedPotTintID = tint.rawValue
+        defaults.set(selectedPotTintID, forKey: Keys.selectedPot)
+    }
+
+    @discardableResult
+    func redeem(_ offer: PetalOffer, now: Date = Date()) -> Bool {
+        if let tint = offer.potTint, ownedPotTintIDs.contains(tint.rawValue) {
+            lastPetalOfferMessage = "Already own \(tint.title)"
+            return false
+        }
+        guard spendPetals(offer.cost) else {
+            lastPetalOfferMessage = "Need \(offer.cost) petals"
+            return false
+        }
+        switch offer {
+        case .mistAll:
+            let n = waterAllPlots(now: now)
+            lastPetalOfferMessage = n == 0 ? "No plants to mist" : "Misted \(n) bed\(n == 1 ? "" : "s")"
+        case .dewBurst:
+            let n = applyDewBurst(now: now)
+            lastPetalOfferMessage = n == 0 ? "Nothing growing to boost" : "Dew burst on \(n) plant\(n == 1 ? "" : "s")"
+        case .organicPouch:
+            _ = grantOrganicFertilizer()
+            lastPetalOfferMessage = "Organic fertilizer ready"
+        case .beeHint:
+            beeHints += 1
+            defaults.set(beeHints, forKey: Keys.beeHints)
+            lastPetalOfferMessage = "Bee lantern ready for the next flight"
+        case .potSage, .potBlush, .potMidnight, .potCream:
+            if let tint = offer.potTint {
+                ownedPotTintIDs.insert(tint.rawValue)
+                persistPots()
+                selectPotTint(tint)
+                lastPetalOfferMessage = "\(tint.title) pots equipped"
+            }
+        }
+        return true
+    }
+
+    /// Score-threshold packs + optional Organic at 2500, once per UTC day.
+    @discardableResult
+    func grantScoreRewards(_ rewards: RunScoreRewards) -> RunScoreRewards {
+        for rarity in rewards.packs {
+            _ = grantPack(rarity, source: "score")
+        }
+        var organic = rewards.organicFertilizer
+        if organic {
+            _ = grantOrganicFertilizer()
+        }
+        lastRunRewards = RunScoreRewards(packs: rewards.packs, organicFertilizer: organic)
+        return lastRunRewards ?? rewards
+    }
+
+    func shouldGrantOrganicForScore(score: Int, utcDay: String) -> Bool {
+        guard score >= ScorePackTable.organicScore else { return false }
+        let last = defaults.string(forKey: Keys.organicScoreDay)
+        guard last != utcDay else { return false }
+        defaults.set(utcDay, forKey: Keys.organicScoreDay)
+        return true
+    }
+
+    func clearRunRewards() {
+        lastRunRewards = nil
+    }
+
+    func ownsPot(_ tint: PotTint) -> Bool {
+        tint.isFree || ownedPotTintIDs.contains(tint.rawValue)
+    }
+
+    private func persistPots() {
+        defaults.set(Array(ownedPotTintIDs).sorted(), forKey: Keys.potTints)
+        defaults.set(selectedPotTintID, forKey: Keys.selectedPot)
+    }
+
+    private func persistMiniWins() {
+        if let data = try? JSONEncoder().encode(miniGameWinCounts) {
+            defaults.set(data, forKey: Keys.miniWins)
+        }
     }
 
     private func consumeSeed(_ species: FlowerSpecies) -> Bool {
