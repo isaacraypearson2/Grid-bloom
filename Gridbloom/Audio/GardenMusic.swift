@@ -45,7 +45,7 @@ final class GardenMusic {
         do {
             let next = try AVAudioPlayer(data: data)
             next.numberOfLoops = -1
-            next.volume = bed == .garden ? 0.22 : 0.16
+            next.volume = bed == .garden ? 0.20 : 0.14
             next.prepareToPlay()
             next.play()
             lock.lock()
@@ -162,8 +162,8 @@ final class GardenMusic {
                 voiceGain = 0.16
                 vibratoHz = 2.0 / 3.0
                 vibratoCents = 7
-                pulseHz = 1.0 / 6.0
-                pulseDepth = 0.07
+                pulseHz = 1.0 / GardenMusic.loopDurationSeconds
+                pulseDepth = 0.05
                 detuneMix = 0.22
                 breathFloor = 0.34
                 h2Center = 0.40
@@ -181,8 +181,8 @@ final class GardenMusic {
                 voiceGain = 0.18
                 vibratoHz = 0.5
                 vibratoCents = 5
-                pulseHz = 1.0 / 8.0
-                pulseDepth = 0.05
+                pulseHz = 1.0 / GardenMusic.loopDurationSeconds
+                pulseDepth = 0.04
                 detuneMix = 0.16
                 breathFloor = 0.46
                 h2Center = 0.30
