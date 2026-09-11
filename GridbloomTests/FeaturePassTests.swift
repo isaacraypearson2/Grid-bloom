@@ -190,9 +190,131 @@ final class FeaturePassTests: XCTestCase {
     }
 
     func testMusicLoopsRender() {
-        XCTAssertNotNil(GardenMusic.renderLoop(.home))
-        XCTAssertNotNil(GardenMusic.renderLoop(.garden))
-        XCTAssertNotEqual(GardenMusic.renderLoop(.home), GardenMusic.renderLoop(.garden))
+        let home = GardenMusic.renderLoop(.home)
+        let garden = GardenMusic.renderLoop(.garden)
+        XCTAssertNotNil(home)
+        XCTAssertNotNil(garden)
+        XCTAssertNotEqual(home, garden)
+        XCTAssertEqual(home.flatMap { String(data: $0.prefix(4), encoding: .ascii) }, "RIFF")
+        XCTAssertEqual(garden.flatMap { String(data: $0.prefix(4), encoding: .ascii) }, "RIFF")
+        let expectedPCM = Int(GardenMusic.sampleRate * GardenMusic.loopDurationSeconds) * 2
+        XCTAssertEqual(home?.count, 44 + expectedPCM)
+        XCTAssertEqual(garden?.count, 44 + expectedPCM)
+    }
+
+    func testMusicLoopsBreatheAndShiftPitch() {
+        let home = pcmSamples(GardenMusic.renderLoop(.home))
+        let garden = pcmSamples(GardenMusic.renderLoop(.garden))
+        XCTAssertFalse(home.isEmpty)
+        XCTAssertFalse(garden.isEmpty)
+
+        let homePeakRMS = rmsSlice(home, start: 2.8, duration: 0.8)
+        let homeTroughRMS = rmsSlice(home, start: 5.7, duration: 0.5)
+        let gardenPeakRMS = rmsSlice(garden, start: 2.8, duration: 0.8)
+        let gardenTroughRMS = rmsSlice(garden, start: 5.7, duration: 0.5)
+        XCTAssertGreaterThan(homePeakRMS / max(homeTroughRMS, 1e-6), 1.45, "home should breathe")
+        XCTAssertGreaterThan(gardenPeakRMS / max(gardenTroughRMS, 1e-6), 1.25, "garden should breathe")
+        XCTAssertGreaterThan(homePeakRMS, 400)
+
+        let homeZCR = windowMetric(home, windows: 4, metric: zeroCrossingRate)
+        let gardenZCR = windowMetric(garden, windows: 4, metric: zeroCrossingRate)
+        XCTAssertGreaterThan(homeZCR.max()! / max(homeZCR.min()!, 1e-9), 1.08, "home pitch should wander")
+        XCTAssertGreaterThan(gardenZCR.max()! / max(gardenZCR.min()!, 1e-9), 1.08, "garden pitch should wander")
+        XCTAssertGreaterThan(
+            homeZCR.reduce(0, +) / Double(homeZCR.count),
+            gardenZCR.reduce(0, +) / Double(gardenZCR.count),
+            "home hummed register should sit above garden"
+        )
+
+        let homePeak = home.map { abs($0) }.max() ?? 0
+        let gardenPeak = garden.map { abs($0) }.max() ?? 0
+        XCTAssertLessThan(homePeak, Int16.max)
+        XCTAssertLessThan(gardenPeak, Int16.max)
+        XCTAssertGreaterThan(homePeak, 2_000)
+        XCTAssertGreaterThan(gardenPeak, 2_000)
+
+        let gardenChirp = goertzelEnergy(Array(garden[pcmRange(6.38, 0.36)]), hz: 1_900)
+        let gardenQuiet = goertzelEnergy(Array(garden[pcmRange(0.38, 0.36)]), hz: 1_900)
+        XCTAssertGreaterThan(gardenChirp, gardenQuiet * 8, "garden should have a brief high bird chirp")
+        let homeChirp = goertzelEnergy(Array(home[pcmRange(6.42, 0.16)]), hz: 2_200)
+        let homeQuiet = goertzelEnergy(Array(home[pcmRange(0.42, 0.16)]), hz: 2_200)
+        XCTAssertGreaterThan(homeChirp, homeQuiet * 8, "home should have a quieter distant chirp")
+    }
+
+    func testMusicPitchContourUsesDistinctHumCenters() {
+        let times = [1.0, 7.0, 13.0, 19.0]
+        let home = times.map { GardenMusic.hummedPitch($0, bed: .home) }
+        let garden = times.map { GardenMusic.hummedPitch($0, bed: .garden) }
+        XCTAssertGreaterThan(Set(home.map { ($0 * 10).rounded() }).count, 2)
+        XCTAssertGreaterThan(Set(garden.map { ($0 * 10).rounded() }).count, 2)
+        XCTAssertGreaterThan(home.min()!, garden.max()! - 20)
+        XCTAssertEqual(GardenMusic.hummedPitch(0, bed: .home), GardenMusic.hummedPitch(24, bed: .home), accuracy: 0.01)
+        XCTAssertEqual(GardenMusic.hummedPitch(0, bed: .garden), GardenMusic.hummedPitch(24, bed: .garden), accuracy: 0.01)
+    }
+
+    private func pcmSamples(_ data: Data?) -> [Int16] {
+        guard let data, data.count > 44 else { return [] }
+        let payload = data.dropFirst(44)
+        return payload.withUnsafeBytes { buf in
+            Array(buf.bindMemory(to: Int16.self))
+        }
+    }
+
+    private func pcmRange(_ start: Double, _ duration: Double) -> Range<Int> {
+        let sr = GardenMusic.sampleRate
+        let limit = Int(sr * GardenMusic.loopDurationSeconds)
+        let from = min(limit - 1, max(0, Int(start * sr)))
+        let to = min(limit, max(from + 1, from + Int(duration * sr)))
+        return from..<to
+    }
+
+    private func rmsSlice(_ samples: [Int16], start: Double, duration: Double) -> Double {
+        let sr = GardenMusic.sampleRate
+        let from = max(0, Int(start * sr))
+        let to = min(samples.count, from + Int(duration * sr))
+        guard from < to else { return 0 }
+        return rms(Array(samples[from..<to]))
+    }
+
+    private func windowMetric(_ samples: [Int16], windows: Int, metric: ([Int16]) -> Double) -> [Double] {
+        let size = max(1, samples.count / windows)
+        return (0..<windows).map { index in
+            let start = index * size
+            let end = min(samples.count, start + size)
+            return metric(Array(samples[start..<end]))
+        }
+    }
+
+    private func rms(_ samples: [Int16]) -> Double {
+        guard !samples.isEmpty else { return 0 }
+        let sum = samples.reduce(0.0) { $0 + Double($1) * Double($1) }
+        return sqrt(sum / Double(samples.count))
+    }
+
+    private func goertzelEnergy(_ samples: [Int16], hz: Double) -> Double {
+        let n = samples.count
+        guard n > 4, hz > 0 else { return 0 }
+        let k = Int((Double(n) * hz / GardenMusic.sampleRate).rounded())
+        let omega = 2 * Double.pi * Double(k) / Double(n)
+        let coeff = 2 * cos(omega)
+        var s0 = 0.0
+        var s1 = 0.0
+        var s2 = 0.0
+        for sample in samples {
+            s0 = Double(sample) + coeff * s1 - s2
+            s2 = s1
+            s1 = s0
+        }
+        return s1 * s1 + s2 * s2 - coeff * s1 * s2
+    }
+
+    private func zeroCrossingRate(_ samples: [Int16]) -> Double {
+        guard samples.count > 1 else { return 0 }
+        var crossings = 0
+        for i in 1..<samples.count where (samples[i - 1] >= 0) != (samples[i] >= 0) {
+            crossings += 1
+        }
+        return Double(crossings) / Double(samples.count)
     }
 
     func testLeaderboardIDsAreSplit() {
