@@ -37,6 +37,7 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var lastWateredPlotID: UUID?
     @Published private(set) var lastRunRewards: RunScoreRewards?
     @Published private(set) var lastPetalOfferMessage: String?
+    @Published private(set) var hasSeenIntro: Bool
 
     private let defaults: UserDefaults
 
@@ -66,6 +67,9 @@ final class PlayerProfile: ObservableObject {
         static let beeHints = "gridbloom.profile.beeHints"
         static let miniWins = "gridbloom.profile.miniGameWins"
         static let organicScoreDay = "gridbloom.profile.organicScoreDay"
+        static let seenIntro = "gridbloom.profile.seenIntro"
+        /// Same key as `AppSettings.hasCompletedOnboarding` so returning players skip the new intro.
+        static let legacyOnboarding = "gridbloom.settings.onboarding"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -112,6 +116,8 @@ final class PlayerProfile: ObservableObject {
         lastWateredPlotID = nil
         lastRunRewards = nil
         lastPetalOfferMessage = nil
+        hasSeenIntro = defaults.bool(forKey: Keys.seenIntro)
+            || defaults.bool(forKey: Keys.legacyOnboarding)
         fertilizerCharges = defaults.integer(forKey: Keys.fertilizer)
         organicFertilizerCharges = defaults.integer(forKey: Keys.organic)
         beeHints = defaults.integer(forKey: Keys.beeHints)
@@ -132,6 +138,7 @@ final class PlayerProfile: ObservableObject {
         // Instance methods require every stored property to already be initialized.
         migrateSeedKeys()
         migrateCollectedVariants()
+        migrateIntroFlag()
         if !defaults.bool(forKey: Keys.starterSeeds) {
             defaults.set(true, forKey: Keys.starterSeeds)
             addSeed(.tulip)
@@ -140,6 +147,12 @@ final class PlayerProfile: ObservableObject {
         }
         refreshGoalsIfNeeded(utcDay: DailySeed.utcDayString())
         tickGarden(now: Date())
+    }
+
+    func markIntroSeen() {
+        hasSeenIntro = true
+        defaults.set(true, forKey: Keys.seenIntro)
+        defaults.set(true, forKey: Keys.legacyOnboarding)
     }
 
     var playedDailyToday: Bool {
@@ -787,6 +800,11 @@ final class PlayerProfile: ObservableObject {
             collectedVariantIDs.insert(BloomCatalog.signature(species).catalogKey)
         }
         defaults.set(Array(collectedVariantIDs).sorted(), forKey: Keys.collectedVariants)
+    }
+
+    private func migrateIntroFlag() {
+        guard hasSeenIntro, !defaults.bool(forKey: Keys.seenIntro) else { return }
+        defaults.set(true, forKey: Keys.seenIntro)
     }
 
     private func persistPlots() {

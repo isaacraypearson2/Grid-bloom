@@ -168,7 +168,7 @@ Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off an
 
 ## UI polish
 
-- First-run onboarding (7 short pages, skippable) plus in-game “Drag a flower…” hint.
+- First-run intro (**≤5 swipeable pages**, skippable) covers Classic bloom/match, garden watering, seed packs, album, and mini-games. Completing plants the player in **Classic Garden**; Skip goes to Home. Shown once (`PlayerProfile.hasSeenIntro` / UserDefaults, migrated from the old settings flag). Settings → How to play replays the same pages. In-game “Drag a flower…” hint still appears on the first match.
 - Settings: How to play, haptics, sound, **music**, color-distinct pieces, Reduce Motion.
 - Home is a **scrollable** screen. Shop / **Leaderboards** / Settings stay as top icons. Destinations in order:
   1. **Classic Garden** (hero — mixed board, always free)
@@ -181,7 +181,7 @@ Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off an
 1. Open `Gridbloom.xcodeproj` in Xcode 16+ (iOS 16+ iPhone simulator).
 2. **Product → Test (⌘U)** — includes grow/water timers, score→pack table, Classic vs Daily boards, collector XP tiers, petal offers, Organic fertilizer, Bee Trail / Bloom Match rules, Ultra obtain flag, procedural music WAV render. Ads still use `MockRewardedAdService`.
 3. **Product → Run (⌘R)** on an iPhone simulator.
-4. Skip or finish onboarding. Tap **Classic Garden**. Pieces should show a large flower on each colored block. Clearing a line should flash that **species across the whole phone** (HUD included, bigger with combo), then let you keep playing. End a run at 100+ and confirm a Common pack on game over (500 Rare, 1000 Epic). Classic best and Daily best on Home must be different chips.
+4. First launch: swipe or tap through **≤5** intro pages, then **Let’s plant** should open **Classic Garden** (not an empty menu). Skip should land on Home. Relaunch must not show the intro again. Pieces should show a large flower on each colored block. Clearing a line should flash that **species across the whole phone** (HUD included, bigger with combo), then let you keep playing. End a run at 100+ and confirm a Common pack on game over (500 Rare, 1000 Epic). Classic best and Daily best on Home must be different chips.
 5. Home **Scan Flower** or Album → **Scan**. Simulator has **no camera** and **no photo library fallback** — you should see the camera-required message. On a device, grant Camera, scan a bloom, plant it; Classic can deal it, Today’s Bloom must not.
 6. Home → **Album**. Confirm Sprout Scout → Meadow Keeper progress, XP bar, and a fun fact on unlocked species. Starters collect as you place them. Buy Lotus if you have 30 petals.
 7. Home → **Mini-games**: Petal Catch (Orchid + Rare), Pattern Bloom (Peony + Glasshouse + Epic), **Bee Trail** (Organic + Rare), **Bloom Match** (Common). Winning Petal Catch + Pattern Bloom still adds one Ultra pack (once). Open that Ultra pack — a full-screen Ultra bloom should play.

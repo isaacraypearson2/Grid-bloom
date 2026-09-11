@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum AppRoute: Equatable {
+    case intro
     case menu
     case play(GameMode)
     case stages
@@ -21,7 +22,10 @@ struct ContentView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var cosmetics: CosmeticsStore
     @EnvironmentObject private var profile: PlayerProfile
-    @State private var route: AppRoute = .menu
+    @State private var route: AppRoute = IntroFlow.initialRoute(
+        seenIntro: PlayerProfile.shared.hasSeenIntro,
+        completedOnboarding: AppSettings.shared.hasCompletedOnboarding
+    )
     @State private var miniGameToast: String?
     @State private var beeHintArmed = false
     @ObservedObject private var boards = LeaderboardService.shared
@@ -31,6 +35,10 @@ struct ContentView: View {
         let theme = cosmetics.resolvedTheme
         return ZStack {
             switch route {
+            case .intro:
+                OnboardingView(theme: theme) { outcome in
+                    finishIntro(outcome)
+                }
             case .menu:
                 MainMenuView(
                     theme: theme,
@@ -271,9 +279,15 @@ struct ContentView: View {
         route = .miniGames
     }
 
+    private func finishIntro(_ outcome: OnboardingOutcome) {
+        profile.markIntroSeen()
+        settings.hasCompletedOnboarding = true
+        route = IntroFlow.route(after: outcome)
+    }
+
     private func applyMusic(for route: AppRoute) {
         switch route {
-        case .menu, .album, .miniGames, .settings, .shop, .stages, .leaderboard:
+        case .intro, .menu, .album, .miniGames, .settings, .shop, .stages, .leaderboard:
             GardenMusic.shared.play(.home)
         case .garden:
             GardenMusic.shared.play(.garden)
