@@ -69,6 +69,7 @@ extension UIColor {
 
 struct GardenBackground: View {
     var theme: BoardTheme = BoardTheme.theme(for: .garden, colorblind: false)
+    var decorativeMarks: Bool = true
 
     var body: some View {
         LinearGradient(
@@ -78,14 +79,18 @@ struct GardenBackground: View {
         )
         .ignoresSafeArea()
         .overlay(alignment: .topTrailing) {
-            BloomMark(size: 64, petal: theme.accent)
-                .opacity(0.26)
-                .padding(28)
+            if decorativeMarks {
+                BloomMark(size: 64, petal: theme.accent)
+                    .opacity(0.26)
+                    .padding(28)
+            }
         }
         .overlay(alignment: .bottomLeading) {
-            BloomMark(size: 48, petal: theme.accent)
-                .opacity(0.16)
-                .padding(36)
+            if decorativeMarks {
+                BloomMark(size: 48, petal: theme.accent)
+                    .opacity(0.16)
+                    .padding(36)
+            }
         }
         .overlay {
             switch theme.pack {

@@ -45,7 +45,7 @@ Home **Scan Flower**, or Album → **Scan**. Close returns to the menu.
 
 ## Progression loop
 
-- **Petals** — 1 per cleared line, plus a small combo bonus. Sinks are data-driven in `PetalCatalog.swift`: Garden mist (10), Dew burst (22), Organic pouch (90), Bee lantern (8), pot tints (12–20), plus Lotus (30) and Desert Bloom (40).
+- **Petals** — 1 per cleared line, plus a small combo bonus. Sinks are data-driven in `PetalCatalog.swift`: Garden mist (10, mist spray VFX), Dew burst (22, dew sparkle + 1.5× / 15 min), Organic pouch (90), Bee lantern (8, garden bee + 1.5× / 1 min), pot tints (12–20, glaze the pot mesh), plus Lotus (30) and Desert Bloom (40).
 - **Daily goals** — three UTC-stable chores (lines / combo / score / petal catch). Auto-claim, once per goal.
 - **Streak** — unchanged Today’s Bloom UTC streak.
 - **Album XP + collector tiers** — XP from collected variants (Common 8 / Rare 14 / Epic 24 / Ultra 40), +12 first-species bonus, +6 per camera scan. Tiers (not “super flower collector”):
@@ -62,7 +62,7 @@ Album shows a progress bar and “N XP to next tier.” Fun facts sit on each un
 
 ## Garden growing loop
 
-Home → **My Garden** (water / fertilizer) or **Seed Packs** (same screen). Fertilizer, Organic, unopened packs, petal shop, and pot tints sit **above** the six beds. The column scrolls on small phones. New profiles start with tulip, daisy, and rose seeds. Watering plays a droplet overlay on that bed.
+Home → **My Garden** (water / fertilizer) or **Seed Packs** (same screen). Fertilizer, Organic, unopened packs, petal shop, and pot tints sit **above** the six beds. The column scrolls on small phones. New profiles start with tulip, daisy, and rose seeds. Each bed is a **potted plant** — selected pot tint colors the pot mesh (rim / body / saucer), not a status-bar sliver. Watering plays a droplet overlay on that bed. **Garden mist** sprays the whole plot grid; **Dew burst** sparkles over the beds. **Bee lantern** sends a bee around planted flowers for 1.5× growth for about a minute.
 
 ### Grow times
 
@@ -86,7 +86,7 @@ Every plant needs water about **every 3 hours** (same clock for all rarities). A
 | Regular | Rewarded ad | 2× | 2 hours | 24 hours | 5 |
 | Organic | Bee Trail (first win + every 3rd), score **2500+** once per UTC day, or 90 petals | 3× | 4 hours | 12 hours | 3 |
 
-Select Regular (watch) or Organic, then **Fertilize** on a bed. Dew burst (22 petals) is a separate 1.5× / 15 min on all growing plants.
+Select Regular (watch) or Organic, then **Fertilize** on a bed. Dew burst (22 petals) is a separate 1.5× / 15 min on all growing plants (with a dew sparkle). Bee lantern (8 petals) is a garden visit: 1.5× for ~1 minute while a bee flies the pots. It is no longer a Bee Trail hint.
 
 ## Flower maps (species stages)
 
@@ -147,7 +147,7 @@ Home → **Mini-games** (earn seed packs / petals / Organic):
 
 1. **Petal Catch** — tap falling petals, catch 10 in 22s. First win: **Orchid** + Rare pack. Repeats: Common pack.
 2. **Pattern Bloom** — repeat the flashed flowers for 3 rounds. First win: **Peony**, **Glasshouse**, Epic pack. Repeats: Rare pack.
-3. **Bee Trail** *(new)* — follow the bee’s visit order under a timer. First win: Rare pack + **Organic**. Repeats: Common pack; Organic every 3rd win. Optional **Bee lantern** (8 petals) highlights the next bloom.
+3. **Bee Trail** *(new)* — follow the bee’s visit order under a timer. First win: Rare pack + **Organic**. Repeats: Common pack; Organic every 3rd win. **Bee lantern** (8 petals) now lives in My Garden (1.5× / 1 min + bee), not as a Bee Trail hint.
 4. **Bloom Match** *(new)* — flip pairs of color variants (6 pairs, 8 misses). First win: Common pack. Repeats: Common, or Rare if mismatches ≤ 2.
 
 Winning Petal Catch + Pattern Bloom once also grants a single **Ultra** pack. Repeats still pay a small petal bonus.
@@ -170,6 +170,7 @@ Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off an
 
 - First-run intro (**≤5 swipeable pages**, skippable) covers Classic bloom/match, garden watering, seed packs, album, and mini-games. Completing plants the player in **Classic Garden**; Skip goes to Home. Shown once (`PlayerProfile.hasSeenIntro` / UserDefaults, migrated from the old settings flag). Settings → How to play replays the same pages. In-game “Drag a flower…” hint still appears on the first match.
 - Settings: How to play, haptics, sound, **music**, color-distinct pieces, Reduce Motion.
+- Home background **fades through album blooms** the player has collected. Fresh profiles (empty album) use a gentle default set (tulip, daisy, rose, lily).
 - Home is a **scrollable** screen. Shop / **Leaderboards** / Settings stay as top icons. Destinations in order:
   1. **Classic Garden** (hero — mixed board, always free)
   2. **Flower Maps** / **My Garden** / **Seed Packs** / **Mini-games** / **Album** / **Scan Flower** (2-column grid)
@@ -189,7 +190,7 @@ Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off an
 9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads. Revive after 100 points should not grant a second Common pack; crossing 500 after revive should grant Rare.
 10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this). Its high score must not overwrite Classic’s.
 11. Settings → Music off: home/garden loops stop. Sound off: SFX and music stop. Silent switch: both should duck (`.ambient`). Reduce Motion: full-screen bloom is a brief tint; watering FX is quieter.
-12. Home → **My Garden**: plant a starter. Grow copy should show **12:00** (Common), not 1:00. **Water** plays droplets. Beds stay hydrated for ~3 hours. **Watch for fertilizer** still 2×/2h/24h. Earn Organic (Bee Trail) and apply — 3×/4h/12h. Spend petals on mist / dew / a pot tint; pot lip color should change.
+12. Home → **My Garden**: plant a starter. Grow copy should show **12:00** (Common), not 1:00. **Water** plays droplets. Beds stay hydrated for ~3 hours. **Watch for fertilizer** still 2×/2h/24h. Earn Organic (Bee Trail) and apply — 3×/4h/12h. Spend petals on mist / dew — a mist spray or dew sparkle should play over the beds. Bee lantern should spawn a flying bee and 1.5× for ~1:00. Pot tints recolor the actual pot mesh. Home should fade through collected album flowers (or the default meadow if the album is empty).
 13. Trophy on Home → Leaderboards. Classic and Daily cards are separate. Friends copy is “coming soon” unless Game Center is signed in and the two board IDs exist in App Store Connect.
 14. Leave a plant unwatered past the 3h + 20m + 40m wilt window — it should die, empty the bed, and sometimes return a salvaged seed. Harvest an Ultra variant (or open an Ultra pack) and confirm the full-screen Ultra bloom. In **Classic** or a flower map (not Today’s Bloom), complete a line that is mostly that Ultra bloom — the rest of the board should wipe with a GRID bloom.
 15. Place a tulip in Classic, then open **Flower Maps** — **Tulip Walk** should unlock and deal only tulips on the meadow board. Today’s Bloom should still ignore extra colors/rarities.

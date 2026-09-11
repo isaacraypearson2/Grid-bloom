@@ -199,7 +199,7 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         return max(0, available.timeIntervalSince(now))
     }
 
-    func growthRate(at date: Date) -> Double {
+    func growthRate(at date: Date, lanternUntil: Date? = nil) -> Double {
         if date >= deathAt() { return 0 }
         if date >= wiltAt() { return 0 }
         var rate = 1.0
@@ -210,10 +210,13 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         if let dew = dewUntil, date < dew {
             rate *= SeedGardenRules.dewMultiplier
         }
+        if let lantern = lanternUntil, date < lantern {
+            rate *= SeedGardenRules.lanternMultiplier
+        }
         return rate
     }
 
-    mutating func tick(now: Date) {
+    mutating func tick(now: Date, lanternUntil: Date? = nil) {
         guard now > lastTickAt else { return }
         var cursor = lastTickAt
         while cursor < now {
@@ -221,10 +224,10 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
                 workRemaining = max(workRemaining, 0)
                 break
             }
-            let next = min(now, nextRateChange(after: cursor) ?? now)
+            let next = min(now, nextRateChange(after: cursor, lanternUntil: lanternUntil) ?? now)
             let dt = next.timeIntervalSince(cursor)
             if dt <= 0 { break }
-            let rate = growthRate(at: cursor)
+            let rate = growthRate(at: cursor, lanternUntil: lanternUntil)
             workRemaining = max(0, workRemaining - dt * rate)
             cursor = next
         }
@@ -236,8 +239,8 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         return min(1, max(0, 1 - workRemaining / baseDuration))
     }
 
-    func remaining(now: Date) -> TimeInterval {
-        let rate = growthRate(at: now)
+    func remaining(now: Date, lanternUntil: Date? = nil) -> TimeInterval {
+        let rate = growthRate(at: now, lanternUntil: lanternUntil)
         if rate <= 0 { return workRemaining }
         return max(0, workRemaining / rate)
     }
@@ -261,10 +264,11 @@ struct GardenPlot: Codable, Equatable, Identifiable, Sendable {
         }
     }
 
-    private func nextRateChange(after date: Date) -> Date? {
+    private func nextRateChange(after date: Date, lanternUntil: Date? = nil) -> Date? {
         var marks: [Date] = [thirstyAt(), wiltAt(), deathAt()]
         if let until = fertilizerUntil { marks.append(until) }
         if let dew = dewUntil { marks.append(dew) }
+        if let lantern = lanternUntil { marks.append(lantern) }
         return marks.filter { $0 > date }.min()
     }
 
@@ -390,6 +394,9 @@ enum SeedGardenRules {
     static let organicChargeCap = 3
     static let dewDuration: TimeInterval = 15 * 60
     static let dewMultiplier = 1.5
+    /// Bee lantern: a visiting bee grants the same 1.5× boost for about a minute.
+    static let lanternDuration: TimeInterval = 60
+    static let lanternMultiplier = 1.5
     static let salvageChance = 0.22
     /// Care clock is about 3 hours for every rarity.
     static let waterInterval: TimeInterval = 3 * 60 * 60

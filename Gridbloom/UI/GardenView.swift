@@ -11,6 +11,7 @@ struct GardenView: View {
     @State private var toast: String?
     @State private var wateringSlot: Int?
     @State private var fertilizeKind: FertilizerKind = .regular
+    @State private var burstFX: GardenBurstFX?
 
     var body: some View {
         ZStack {
@@ -39,9 +40,19 @@ struct GardenView: View {
                         potTintRow
 
                         TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                ForEach(0..<SeedGardenRules.plotCount, id: \.self) { slot in
-                                    plotCard(slot: slot, now: timeline.date)
+                            VStack(alignment: .leading, spacing: 10) {
+                                if profile.isBeeLanternActive(now: timeline.date) {
+                                    Text("Lantern bee — 1.5× for \(SeedGardenRules.formatRemaining(profile.beeLanternRemaining(now: timeline.date)))")
+                                        .font(.system(.caption, design: .rounded).weight(.semibold))
+                                        .foregroundColor(Color(red: 0.72, green: 0.50, blue: 0.12))
+                                }
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                    ForEach(0..<SeedGardenRules.plotCount, id: \.self) { slot in
+                                        plotCard(slot: slot, now: timeline.date)
+                                    }
+                                }
+                                .overlay {
+                                    gardenBedFX(now: timeline.date)
                                 }
                             }
                         }
@@ -172,7 +183,7 @@ struct GardenView: View {
             Text("Spend petals")
                 .font(.system(.headline, design: .rounded).weight(.bold))
                 .foregroundColor(theme.ink)
-            Text("Mists, dew, pot tints, Bee lanterns, Organic pouches.")
+            Text("Mist and dew play over the beds. Bee lantern sends a bee for 1.5× / 1 min.")
                 .font(.system(.caption, design: .rounded))
                 .foregroundColor(theme.inkSoft)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -182,6 +193,7 @@ struct GardenView: View {
                             if profile.redeem(offer) {
                                 toast = profile.lastPetalOfferMessage ?? offer.title
                                 Haptics.success()
+                                playBurst(for: offer)
                             } else {
                                 toast = profile.lastPetalOfferMessage ?? "Need \(offer.cost) petals"
                                 Haptics.error()
@@ -223,11 +235,18 @@ struct GardenView: View {
                             Haptics.error()
                         }
                     } label: {
-                        Circle()
-                            .fill(tint.fill)
-                            .frame(width: 28, height: 28)
+                        FlowerPotShape()
+                            .fill(
+                                LinearGradient(
+                                    colors: [tint.rim, tint.fill, tint.saucer],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 26, height: 28)
                             .overlay(
-                                Circle().stroke(profile.selectedPotTint == tint ? theme.ink : Color.clear, lineWidth: 2)
+                                FlowerPotShape()
+                                    .stroke(profile.selectedPotTint == tint ? theme.ink : Color.clear, lineWidth: 2)
                             )
                             .opacity(profile.ownsPot(tint) ? 1 : 0.35)
                     }
@@ -313,23 +332,54 @@ struct GardenView: View {
 
     private func resolvedPlot(slot: Int, now: Date) -> GardenPlot? {
         guard var plot = profile.gardenPlots.first(where: { $0.slot == slot }) else { return nil }
-        plot.tick(now: now)
+        plot.tick(now: now, lanternUntil: profile.beeLanternUntil)
         return plot
+    }
+
+    private func gardenBedFX(now: Date) -> some View {
+        let reduced = AppSettings.shared.prefersReducedMotion
+        let planted = profile.gardenPlots.map(\.slot)
+        return ZStack {
+            if burstFX == .mist {
+                MistSprayFX(reduced: reduced)
+            }
+            if burstFX == .dew {
+                DewSparkleFX(reduced: reduced)
+            }
+            if profile.isBeeLanternActive(now: now) {
+                BeeLanternFlight(plantedSlots: planted, reduced: reduced)
+            }
+        }
+    }
+
+    private func playBurst(for offer: PetalOffer) {
+        let burst: GardenBurstFX?
+        switch offer {
+        case .mistAll:
+            burst = .mist
+            SoundPlayer.shared.place()
+        case .dewBurst:
+            burst = .dew
+            SoundPlayer.shared.bloom(combo: 2)
+        case .beeHint:
+            burst = nil
+            SoundPlayer.shared.bloom(combo: 1)
+        default:
+            burst = nil
+        }
+        guard let burst else { return }
+        burstFX = burst
+        let hold = AppSettings.shared.prefersReducedMotion ? 0.4 : 1.45
+        DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+            if burstFX == burst { burstFX = nil }
+        }
     }
 
     private func plotCard(slot: Int, now: Date) -> some View {
         let plot = resolvedPlot(slot: slot, now: now)
         return VStack(spacing: 6) {
+            potPlant(plot: plot, slot: slot, now: now)
             if let plot {
-                ZStack {
-                    BloomMark(size: 26, petal: plot.careStage(now: now) == .wilted ? theme.inkSoft : plot.bloom.swiftTint)
-                        .opacity(plot.careStage(now: now) == .wilted ? 0.55 : 1)
-                    if wateringSlot == slot {
-                        WateringFX(accent: theme.accent, reduced: AppSettings.shared.prefersReducedMotion)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-                }
-                .frame(height: 40)
                 Text(plot.bloom.title)
                     .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundColor(theme.ink)
@@ -351,6 +401,10 @@ struct GardenView: View {
                     Text("\(plot.fertilizerKind.multiplier, specifier: "%g")× \(plot.fertilizerKind.title.lowercased())")
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
                         .foregroundColor(plot.fertilizerKind.fill)
+                } else if profile.isBeeLanternActive(now: now) {
+                    Text("Bee 1.5×")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color(red: 0.86, green: 0.62, blue: 0.16))
                 } else if plot.isDewActive(now: now) {
                     Text("Dew burst")
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -383,7 +437,7 @@ struct GardenView: View {
                 } else {
                     ProgressView(value: plot.progress(now: now))
                         .tint(plot.bloom.rarity.fill)
-                    Text(SeedGardenRules.formatRemaining(plot.remaining(now: now)))
+                    Text(SeedGardenRules.formatRemaining(plot.remaining(now: now, lanternUntil: profile.beeLanternUntil)))
                         .font(.system(size: 11, design: .rounded).monospacedDigit())
                         .foregroundColor(theme.inkSoft)
                 }
@@ -413,10 +467,7 @@ struct GardenView: View {
                         .multilineTextAlignment(.center)
                 }
             } else {
-                Image(systemName: "plus")
-                    .font(.title3.weight(.bold))
-                    .foregroundColor(theme.inkSoft)
-                Text("Empty bed")
+                Text("Empty pot")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundColor(theme.inkSoft)
                 Button("Plant") {
@@ -430,17 +481,34 @@ struct GardenView: View {
                 .clipShape(Capsule())
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 196)
+        .frame(maxWidth: .infinity, minHeight: 220)
         .padding(10)
         .background(plotBackground(live: plot, now: now))
-        .overlay(alignment: .bottom) {
-            Capsule()
-                .fill(profile.selectedPotTint.fill)
-                .frame(height: 6)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 6)
-        }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func potPlant(plot: GardenPlot?, slot: Int, now: Date) -> some View {
+        ZStack(alignment: .bottom) {
+            FlowerPotView(tint: profile.selectedPotTint, empty: plot == nil)
+            if let plot {
+                BloomMark(
+                    size: 30,
+                    petal: plot.careStage(now: now) == .wilted ? theme.inkSoft : plot.bloom.swiftTint
+                )
+                .opacity(plot.careStage(now: now) == .wilted ? 0.55 : 1)
+                .offset(y: -46)
+            } else {
+                Image(systemName: "plus")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(theme.inkSoft)
+                    .offset(y: -46)
+            }
+            if wateringSlot == slot {
+                WateringFX(accent: theme.accent, reduced: AppSettings.shared.prefersReducedMotion)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .frame(height: 88)
     }
 
     private func plotBackground(live: GardenPlot?, now: Date) -> Color {

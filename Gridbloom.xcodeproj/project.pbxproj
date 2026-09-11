@@ -87,6 +87,9 @@
 		A10000000000000000000243 /* BloomMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000242 /* BloomMatchView.swift */; };
 		A10000000000000000000245 /* WateringFX.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000244 /* WateringFX.swift */; };
 		A10000000000000000000247 /* FeaturePassTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000246 /* FeaturePassTests.swift */; };
+		A10000000000000000000251 /* GardenFX.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000250 /* GardenFX.swift */; };
+		A10000000000000000000253 /* HomeBloomBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000252 /* HomeBloomBackdrop.swift */; };
+		A10000000000000000000255 /* GardenVisualsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000254 /* GardenVisualsTests.swift */; };
 		A10000000000000000000249 /* GameKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000248 /* GameKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -185,6 +188,9 @@
 		A10000000000000000000244 /* WateringFX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WateringFX.swift; sourceTree = "<group>"; };
 		A10000000000000000000246 /* FeaturePassTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturePassTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000248 /* GameKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameKit.framework; path = System/Library/Frameworks/GameKit.framework; sourceTree = SDKROOT; };
+		A10000000000000000000250 /* GardenFX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenFX.swift; sourceTree = "<group>"; };
+		A10000000000000000000252 /* HomeBloomBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBloomBackdrop.swift; sourceTree = "<group>"; };
+		A10000000000000000000254 /* GardenVisualsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenVisualsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -337,6 +343,8 @@
 				A10000000000000000000240 /* BeeTrailView.swift */,
 				A10000000000000000000242 /* BloomMatchView.swift */,
 				A10000000000000000000244 /* WateringFX.swift */,
+				A10000000000000000000250 /* GardenFX.swift */,
+				A10000000000000000000252 /* HomeBloomBackdrop.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -384,6 +392,7 @@
 				A10000000000000000000210 /* GardenLoopTests.swift */,
 				A10000000000000000000224 /* BloomCatalogTests.swift */,
 				A10000000000000000000246 /* FeaturePassTests.swift */,
+				A10000000000000000000254 /* GardenVisualsTests.swift */,
 			);
 			path = GridbloomTests;
 			sourceTree = "<group>";
@@ -553,6 +562,8 @@
 				A10000000000000000000241 /* BeeTrailView.swift in Sources */,
 				A10000000000000000000243 /* BloomMatchView.swift in Sources */,
 				A10000000000000000000245 /* WateringFX.swift in Sources */,
+				A10000000000000000000251 /* GardenFX.swift in Sources */,
+				A10000000000000000000253 /* HomeBloomBackdrop.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -575,6 +586,7 @@
 				A10000000000000000000211 /* GardenLoopTests.swift in Sources */,
 				A10000000000000000000225 /* BloomCatalogTests.swift in Sources */,
 				A10000000000000000000247 /* FeaturePassTests.swift in Sources */,
+				A10000000000000000000255 /* GardenVisualsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
