@@ -174,12 +174,12 @@ Timing is authored with organic jitter (not a clock grid) so the loop does not f
 
 Calm, sparse, warm, slightly melancholic-peaceful — the *feeling* of cozy video-game ambient (soft plucks, pad islands, space between notes). **Original synthesis only.** Do not copy, recreate, or approximate Minecraft / C418 (or any other) melodies or stems. Home and garden use original pentatonic floats (Bb-major-ish indoors, G-minor-ish earth), not a composed theme.
 
-Occasional soft procedural bird chirps stay in both beds (sparser / more distant on Home).
+Soft procedural bird chirps sit on top of both beds without drowning the pad. They are still sparse (a handful of moments per 48s loop) but more lifelike: mixed pitch centers, up/down sweeps, and occasional **2–3 note phrases** with irregular spacing so the loop does not feel like the same single peep. Home stays more distant; garden is closer and phrase-heavier.
 
 | Bed | Where | Tone |
 | --- | --- | --- |
-| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards, intro | Softer, higher plucks + few spikes, distant chirps |
-| Garden | **My Garden** only | Earthier, more mycelium bursts, closer birds, hint of soil |
+| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards, intro | Softer, higher plucks + few spikes, distant chirps and a couple of short phrases |
+| Garden | **My Garden** only | Earthier, more mycelium bursts, closer birds / chirp sequences, hint of soil |
 | Off | Match play, scan, and the four mini-games | SFX only |
 
 Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off and the silent switch. Toggle Music after mute to restart the current bed.

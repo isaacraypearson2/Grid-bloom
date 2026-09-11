@@ -111,8 +111,20 @@ final class GardenMusic {
         BedSpec(bed).pulses
     }
 
+    struct ChirpEvent: Equatable {
+        let start: Double
+        let duration: Double
+        let f0: Double
+        let f1: Double
+        let gain: Double
+    }
+
+    static func chirpEvents(_ bed: Bed) -> [ChirpEvent] {
+        BedSpec(bed).chirps
+    }
+
     static func chirpStarts(_ bed: Bed) -> [Double] {
-        BedSpec(bed).chirps.map(\.start)
+        chirpEvents(bed).map(\.start)
     }
 
     /// 48-second 22050 Hz mono 16-bit WAV: quiet warm pad + spike-train tones + birds.
@@ -197,14 +209,6 @@ final class GardenMusic {
         return wav(samples: samples, sampleRate: UInt32(sampleRate))
     }
 
-    private struct Chirp {
-        let start: Double
-        let duration: Double
-        let f0: Double
-        let f1: Double
-        let gain: Double
-    }
-
     private struct PadPartial {
         let hz: Double
         let gain: Double
@@ -220,7 +224,7 @@ final class GardenMusic {
         let soilGain: Double
         let soilSeed: UInt64
         let pulses: [PulseEvent]
-        let chirps: [Chirp]
+        let chirps: [ChirpEvent]
 
         init(_ bed: Bed) {
             switch bed {
@@ -248,10 +252,21 @@ final class GardenMusic {
                     PulseEvent(start: 41.25, hz: 233.08, duration: 2.40, gain: 0.112, kind: .pluck),
                     PulseEvent(start: 44.80, hz: 174.61, duration: 2.20, gain: 0.090, kind: .pluck)
                 ]
+                // Distant birds: singles plus a few 2–3 note phrases, irregular gaps.
                 chirps = [
-                    Chirp(start: 11.82, duration: 0.11, f0: 2_080, f1: 2_560, gain: 0.008),
-                    Chirp(start: 28.62, duration: 0.10, f0: 2_360, f1: 1_880, gain: 0.007),
-                    Chirp(start: 39.55, duration: 0.09, f0: 1_980, f1: 2_420, gain: 0.0065)
+                    ChirpEvent(start: 11.82, duration: 0.11, f0: 2_080, f1: 2_560, gain: 0.008),
+                    ChirpEvent(start: 16.88, duration: 0.09, f0: 2_840, f1: 3_180, gain: 0.0068),
+                    ChirpEvent(start: 17.08, duration: 0.10, f0: 2_460, f1: 1_980, gain: 0.0062),
+                    ChirpEvent(start: 21.18, duration: 0.10, f0: 2_650, f1: 2_040, gain: 0.0072),
+                    ChirpEvent(start: 25.08, duration: 0.08, f0: 1_920, f1: 2_380, gain: 0.0066),
+                    ChirpEvent(start: 25.26, duration: 0.09, f0: 2_280, f1: 2_680, gain: 0.0064),
+                    ChirpEvent(start: 25.49, duration: 0.10, f0: 2_140, f1: 1_760, gain: 0.0060),
+                    ChirpEvent(start: 28.62, duration: 0.10, f0: 2_360, f1: 1_880, gain: 0.007),
+                    ChirpEvent(start: 33.92, duration: 0.11, f0: 1_540, f1: 1_860, gain: 0.0062),
+                    ChirpEvent(start: 34.14, duration: 0.09, f0: 1_780, f1: 1_420, gain: 0.0056),
+                    ChirpEvent(start: 39.55, duration: 0.09, f0: 1_980, f1: 2_420, gain: 0.0065),
+                    ChirpEvent(start: 43.48, duration: 0.08, f0: 2_200, f1: 2_640, gain: 0.0064),
+                    ChirpEvent(start: 43.70, duration: 0.10, f0: 2_480, f1: 2_010, gain: 0.0058)
                 ]
             case .garden:
                 // More nature / mycelium: G-minor earth tones, bursty spike trains, closer birds.
@@ -288,15 +303,28 @@ final class GardenMusic {
                     PulseEvent(start: 40.80, hz: 98.00, duration: 4.60, gain: 0.086, kind: .swell),
                     PulseEvent(start: 45.20, hz: 196.00, duration: 2.20, gain: 0.120, kind: .pluck)
                 ]
+                // Closer, more lifelike: mixed pitches, 2–3 note phrases, irregular timing.
                 chirps = [
-                    Chirp(start: 6.38, duration: 0.13, f0: 1_680, f1: 2_280, gain: 0.014),
-                    Chirp(start: 6.60, duration: 0.11, f0: 2_160, f1: 1_720, gain: 0.011),
-                    Chirp(start: 12.28, duration: 0.15, f0: 1_460, f1: 1_940, gain: 0.012),
-                    Chirp(start: 19.52, duration: 0.11, f0: 2_480, f1: 1_980, gain: 0.010),
-                    Chirp(start: 19.72, duration: 0.10, f0: 2_040, f1: 1_640, gain: 0.008),
-                    Chirp(start: 31.18, duration: 0.12, f0: 1_880, f1: 2_320, gain: 0.011),
-                    Chirp(start: 43.35, duration: 0.13, f0: 1_720, f1: 2_140, gain: 0.012),
-                    Chirp(start: 43.58, duration: 0.10, f0: 2_100, f1: 1_680, gain: 0.009)
+                    ChirpEvent(start: 6.38, duration: 0.13, f0: 1_680, f1: 2_280, gain: 0.014),
+                    ChirpEvent(start: 6.60, duration: 0.11, f0: 2_160, f1: 1_720, gain: 0.011),
+                    ChirpEvent(start: 9.18, duration: 0.10, f0: 2_380, f1: 1_840, gain: 0.011),
+                    ChirpEvent(start: 12.28, duration: 0.12, f0: 1_460, f1: 1_940, gain: 0.012),
+                    ChirpEvent(start: 12.49, duration: 0.10, f0: 1_880, f1: 1_520, gain: 0.010),
+                    ChirpEvent(start: 15.82, duration: 0.09, f0: 1_720, f1: 2_240, gain: 0.012),
+                    ChirpEvent(start: 16.02, duration: 0.08, f0: 2_100, f1: 2_560, gain: 0.011),
+                    ChirpEvent(start: 16.28, duration: 0.11, f0: 1_980, f1: 1_640, gain: 0.0095),
+                    ChirpEvent(start: 19.52, duration: 0.11, f0: 2_480, f1: 1_980, gain: 0.010),
+                    ChirpEvent(start: 19.72, duration: 0.10, f0: 2_040, f1: 1_640, gain: 0.008),
+                    ChirpEvent(start: 23.88, duration: 0.12, f0: 1_960, f1: 2_520, gain: 0.011),
+                    ChirpEvent(start: 27.42, duration: 0.09, f0: 2_540, f1: 2_080, gain: 0.011),
+                    ChirpEvent(start: 27.66, duration: 0.10, f0: 2_220, f1: 1_780, gain: 0.009),
+                    ChirpEvent(start: 31.18, duration: 0.12, f0: 1_880, f1: 2_320, gain: 0.011),
+                    ChirpEvent(start: 35.70, duration: 0.10, f0: 1_480, f1: 1_860, gain: 0.012),
+                    ChirpEvent(start: 35.92, duration: 0.09, f0: 1_760, f1: 2_140, gain: 0.011),
+                    ChirpEvent(start: 36.18, duration: 0.11, f0: 2_020, f1: 1_680, gain: 0.009),
+                    ChirpEvent(start: 40.15, duration: 0.10, f0: 2_280, f1: 1_760, gain: 0.010),
+                    ChirpEvent(start: 43.35, duration: 0.13, f0: 1_720, f1: 2_140, gain: 0.012),
+                    ChirpEvent(start: 43.58, duration: 0.10, f0: 2_100, f1: 1_680, gain: 0.009)
                 ]
             }
         }
@@ -355,7 +383,7 @@ final class GardenMusic {
         return pow(sin(Double.pi * u / duration), 1.15)
     }
 
-    private static func chirpMix(_ t: Double, chirps: [Chirp]) -> Double {
+    private static func chirpMix(_ t: Double, chirps: [ChirpEvent]) -> Double {
         var mix = 0.0
         for chirp in chirps {
             let u = t - chirp.start
@@ -369,7 +397,9 @@ final class GardenMusic {
             } else {
                 phase = 2 * Double.pi * chirp.f0 * chirp.duration / log(ratio) * (pow(ratio, x) - 1)
             }
-            mix += (sin(phase) + 0.16 * sin(2 * phase)) * env * chirp.gain
+            // Brighter partials on higher peeps so phrases don’t all sound like one bird.
+            let bright = chirp.f0 > 2_200 ? 0.22 : 0.14
+            mix += (sin(phase) + bright * sin(2 * phase)) * env * chirp.gain
         }
         return mix
     }

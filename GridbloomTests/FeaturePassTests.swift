@@ -282,6 +282,74 @@ final class FeaturePassTests: XCTestCase {
         XCTAssertEqual(GardenMusic.chirpStarts(.garden).first, 6.38, accuracy: 0.01)
     }
 
+    func testBirdChirpsHavePhrasesAndVariety() {
+        let home = GardenMusic.chirpEvents(.home)
+        let garden = GardenMusic.chirpEvents(.garden)
+        XCTAssertGreaterThanOrEqual(home.count, 10, "home should have more than a couple of isolated chirps")
+        XCTAssertGreaterThanOrEqual(garden.count, 16, "garden should feel more alive with birds")
+        XCTAssertGreaterThan(garden.count, home.count)
+
+        let homePhrases = chirpPhraseLengths(home.map(\.start))
+        let gardenPhrases = chirpPhraseLengths(garden.map(\.start))
+        XCTAssertTrue(homePhrases.contains { $0 == 2 }, "home should have a 2-note phrase")
+        XCTAssertTrue(homePhrases.contains { $0 >= 3 }, "home should have a 3-note phrase")
+        XCTAssertTrue(gardenPhrases.contains { $0 == 2 }, "garden should have a 2-note phrase")
+        XCTAssertGreaterThan(gardenPhrases.filter { $0 >= 3 }.count, 1, "garden should have more than one 3-note phrase")
+
+        let homePitches = Set(home.map { ($0.f0 / 40).rounded() })
+        let gardenPitches = Set(garden.map { ($0.f0 / 40).rounded() })
+        XCTAssertGreaterThan(homePitches.count, 4, "home chirps should use several pitch centers")
+        XCTAssertGreaterThan(gardenPitches.count, 5, "garden chirps should use several pitch centers")
+
+        let homeMoments = chirpMomentStarts(home.map(\.start))
+        let gardenMoments = chirpMomentStarts(garden.map(\.start))
+        XCTAssertGreaterThan(gapRatio(homeMoments), 1.8, "home bird timing should not feel metronomic")
+        XCTAssertGreaterThan(gapRatio(gardenMoments), 1.8, "garden bird timing should not feel metronomic")
+
+        let homeGain = home.map(\.gain).reduce(0, +) / Double(home.count)
+        let gardenGain = garden.map(\.gain).reduce(0, +) / Double(garden.count)
+        XCTAssertGreaterThan(gardenGain, homeGain, "garden birds should sit a little closer")
+
+        let samples = pcmSamples(GardenMusic.renderLoop(.home))
+        let phrase = goertzelEnergy(Array(samples[pcmRange(25.08, 0.55)]), hz: 2_200)
+        let padOnly = goertzelEnergy(Array(samples[pcmRange(7.60, 0.55)]), hz: 2_200)
+        XCTAssertGreaterThan(phrase, padOnly * 8, "a home 3-note phrase should be audible without drowning the bed")
+        XCTAssertLessThan(home.map(\.gain).max() ?? 1, 0.02, "chirps must stay under the pad/pulses")
+        XCTAssertLessThan(garden.map(\.gain).max() ?? 1, 0.02, "chirps must stay under the pad/pulses")
+    }
+
+    private func chirpPhraseLengths(_ starts: [Double]) -> [Int] {
+        let sorted = starts.sorted()
+        var lengths: [Int] = []
+        var index = 0
+        while index < sorted.count {
+            var count = 1
+            var cursor = index
+            while cursor + 1 < sorted.count, sorted[cursor + 1] - sorted[cursor] < 0.35 {
+                count += 1
+                cursor += 1
+            }
+            lengths.append(count)
+            index = cursor + 1
+        }
+        return lengths
+    }
+
+    private func chirpMomentStarts(_ starts: [Double]) -> [Double] {
+        let sorted = starts.sorted()
+        var moments: [Double] = []
+        for time in sorted {
+            if let last = moments.last, time - last < 0.35 { continue }
+            moments.append(time)
+        }
+        return moments
+    }
+
+    private func gapRatio(_ times: [Double]) -> Double {
+        let gaps = zip(times, times.dropFirst()).map { $1 - $0 }
+        return (gaps.max() ?? 0) / max(gaps.min() ?? 1, 1e-6)
+    }
+
     private func pcmSamples(_ data: Data?) -> [Int16] {
         guard let data, data.count > 44 else { return [] }
         let payload = data.dropFirst(44)
