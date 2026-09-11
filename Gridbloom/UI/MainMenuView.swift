@@ -52,10 +52,13 @@ struct MainMenuView: View {
     var onShop: () -> Void
     var onSettings: () -> Void
     var onLeaderboard: () -> Void
+    var albumBlooms: [BloomVariant] = HomeBloomSlideshow.defaultBlooms
+    var reducedMotion: Bool = false
 
     var body: some View {
         ZStack {
-            GardenBackground(theme: theme)
+            GardenBackground(theme: theme, decorativeMarks: false)
+            HomeBloomBackdrop(blooms: albumBlooms, reduced: reducedMotion)
             ScrollView {
                 VStack(spacing: 16) {
                     HStack {

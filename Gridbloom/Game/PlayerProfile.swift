@@ -31,6 +31,7 @@ final class PlayerProfile: ObservableObject {
     @Published private(set) var ownedPotTintIDs: Set<String>
     @Published private(set) var selectedPotTintID: String
     @Published private(set) var beeHints: Int
+    @Published private(set) var beeLanternUntil: Date?
     @Published private(set) var miniGameWinCounts: [String: Int]
     @Published private(set) var lastGardenEvent: GardenEvent?
     @Published private(set) var lastUltraBloom: BloomVariant?
@@ -65,6 +66,7 @@ final class PlayerProfile: ObservableObject {
         static let potTints = "gridbloom.profile.potTints"
         static let selectedPot = "gridbloom.profile.selectedPot"
         static let beeHints = "gridbloom.profile.beeHints"
+        static let beeLanternUntil = "gridbloom.profile.beeLanternUntil"
         static let miniWins = "gridbloom.profile.miniGameWins"
         static let organicScoreDay = "gridbloom.profile.organicScoreDay"
         static let seenIntro = "gridbloom.profile.seenIntro"
@@ -121,6 +123,12 @@ final class PlayerProfile: ObservableObject {
         fertilizerCharges = defaults.integer(forKey: Keys.fertilizer)
         organicFertilizerCharges = defaults.integer(forKey: Keys.organic)
         beeHints = defaults.integer(forKey: Keys.beeHints)
+        if defaults.object(forKey: Keys.beeLanternUntil) != nil {
+            let stamp = defaults.double(forKey: Keys.beeLanternUntil)
+            beeLanternUntil = stamp > 0 ? Date(timeIntervalSince1970: stamp) : nil
+        } else {
+            beeLanternUntil = nil
+        }
         ownedPotTintIDs = Set(defaults.stringArray(forKey: Keys.potTints) ?? [PotTint.terracotta.rawValue])
         selectedPotTintID = defaults.string(forKey: Keys.selectedPot) ?? PotTint.terracotta.rawValue
         if let winData = defaults.data(forKey: Keys.miniWins),
@@ -139,6 +147,7 @@ final class PlayerProfile: ObservableObject {
         migrateSeedKeys()
         migrateCollectedVariants()
         migrateIntroFlag()
+        migrateBeeHintsToLantern()
         if !defaults.bool(forKey: Keys.starterSeeds) {
             defaults.set(true, forKey: Keys.starterSeeds)
             addSeed(.tulip)
@@ -193,6 +202,16 @@ final class PlayerProfile: ObservableObject {
 
     var selectedPotTint: PotTint {
         PotTint(rawValue: selectedPotTintID) ?? .terracotta
+    }
+
+    func isBeeLanternActive(now: Date = Date()) -> Bool {
+        guard let until = beeLanternUntil else { return false }
+        return now < until
+    }
+
+    func beeLanternRemaining(now: Date = Date()) -> TimeInterval {
+        guard let until = beeLanternUntil else { return 0 }
+        return max(0, until.timeIntervalSince(now))
     }
 
     var todayGoals: [DailyGoal] {
@@ -535,7 +554,7 @@ final class PlayerProfile: ObservableObject {
         tickGarden(now: now)
         guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return false }
         var plot = gardenPlots[index]
-        plot.tick(now: now)
+        plot.tick(now: now, lanternUntil: beeLanternUntil)
         guard !plot.isDead(now: now) else { return false }
         plot.lastWateredAt = now
         gardenPlots[index] = plot
@@ -584,7 +603,7 @@ final class PlayerProfile: ObservableObject {
         tickGarden(now: now)
         guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return false }
         var plot = gardenPlots[index]
-        plot.tick(now: now)
+        plot.tick(now: now, lanternUntil: beeLanternUntil)
         guard plot.canAcceptFertilizer(now: now) else { return false }
         switch kind {
         case .regular:
@@ -610,7 +629,7 @@ final class PlayerProfile: ObservableObject {
         var count = 0
         for index in gardenPlots.indices {
             var plot = gardenPlots[index]
-            plot.tick(now: now)
+            plot.tick(now: now, lanternUntil: beeLanternUntil)
             guard !plot.isDead(now: now), plot.workRemaining > 0.01, plot.careStage(now: now) != .wilted else { continue }
             plot.dewUntil = now.addingTimeInterval(SeedGardenRules.dewDuration)
             gardenPlots[index] = plot
@@ -621,11 +640,20 @@ final class PlayerProfile: ObservableObject {
     }
 
     @discardableResult
+    func applyBeeLantern(now: Date = Date()) -> Date {
+        tickGarden(now: now)
+        let until = now.addingTimeInterval(SeedGardenRules.lanternDuration)
+        beeLanternUntil = until
+        persistLantern()
+        return until
+    }
+
+    @discardableResult
     func harvestPlot(_ id: UUID, now: Date = Date()) -> FlowerSpecies? {
         tickGarden(now: now)
         guard let index = gardenPlots.firstIndex(where: { $0.id == id }) else { return nil }
         var plot = gardenPlots[index]
-        plot.tick(now: now)
+        plot.tick(now: now, lanternUntil: beeLanternUntil)
         guard plot.isReady(now: now) else { return nil }
         gardenPlots.remove(at: index)
         persistPlots()
@@ -640,7 +668,7 @@ final class PlayerProfile: ObservableObject {
         var next: [GardenPlot] = []
         var event: GardenEvent?
         for var plot in gardenPlots {
-            plot.tick(now: now)
+            plot.tick(now: now, lanternUntil: beeLanternUntil)
             if plot.isDead(now: now) {
                 let salvaged = SeedGardenRules.salvagesSeed(plotID: plot.id)
                 if salvaged {
@@ -711,9 +739,8 @@ final class PlayerProfile: ObservableObject {
             _ = grantOrganicFertilizer()
             lastPetalOfferMessage = "Organic fertilizer ready"
         case .beeHint:
-            beeHints += 1
-            defaults.set(beeHints, forKey: Keys.beeHints)
-            lastPetalOfferMessage = "Bee lantern ready for the next flight"
+            _ = applyBeeLantern(now: now)
+            lastPetalOfferMessage = "Lantern bee — 1.5× growth for 1:00"
         case .potSage, .potBlush, .potMidnight, .potCream:
             if let tint = offer.potTint {
                 ownedPotTintIDs.insert(tint.rawValue)
@@ -758,6 +785,26 @@ final class PlayerProfile: ObservableObject {
     private func persistPots() {
         defaults.set(Array(ownedPotTintIDs).sorted(), forKey: Keys.potTints)
         defaults.set(selectedPotTintID, forKey: Keys.selectedPot)
+    }
+
+    private func persistLantern() {
+        if let until = beeLanternUntil {
+            defaults.set(until.timeIntervalSince1970, forKey: Keys.beeLanternUntil)
+        } else {
+            defaults.removeObject(forKey: Keys.beeLanternUntil)
+        }
+    }
+
+    /// Old Bee Trail hint charges become garden lantern time.
+    private func migrateBeeHintsToLantern() {
+        guard beeHints > 0 else { return }
+        let extra = TimeInterval(beeHints) * SeedGardenRules.lanternDuration
+        let now = Date()
+        let base = max(now, beeLanternUntil ?? now)
+        beeLanternUntil = base.addingTimeInterval(extra)
+        beeHints = 0
+        defaults.set(0, forKey: Keys.beeHints)
+        persistLantern()
     }
 
     private func persistMiniWins() {

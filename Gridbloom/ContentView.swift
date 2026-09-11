@@ -27,7 +27,6 @@ struct ContentView: View {
         completedOnboarding: AppSettings.shared.hasCompletedOnboarding
     )
     @State private var miniGameToast: String?
-    @State private var beeHintArmed = false
     @ObservedObject private var boards = LeaderboardService.shared
     private let scoreStore = UserDefaultsScoreStore()
 
@@ -65,7 +64,9 @@ struct ContentView: View {
                     onSeedPacks: { route = .garden },
                     onShop: { route = .shop },
                     onSettings: { route = .settings },
-                    onLeaderboard: { route = .leaderboard }
+                    onLeaderboard: { route = .leaderboard },
+                    albumBlooms: HomeBloomSlideshow.blooms(collectedVariantIDs: profile.collectedVariantIDs),
+                    reducedMotion: settings.prefersReducedMotion
                 )
             case .play(let mode):
                 GameView(mode: mode, onExit: { route = .menu })
@@ -115,8 +116,6 @@ struct ContentView: View {
                     onPetalCatch: { route = .petalCatch },
                     onPatternBloom: { route = .patternBloom },
                     onBeeTrail: {
-                        beeHintArmed = profile.beeHints > 0
-                        _ = profile.consumeBeeHint()
                         route = .beeTrail
                     },
                     onBloomMatch: { route = .bloomMatch },
@@ -138,7 +137,7 @@ struct ContentView: View {
             case .beeTrail:
                 BeeTrailView(
                     theme: theme,
-                    highlightNext: beeHintArmed,
+                    highlightNext: false,
                     onExit: { route = .miniGames },
                     onFinished: finishBeeTrail
                 )
@@ -247,7 +246,6 @@ struct ContentView: View {
     }
 
     private func finishBeeTrail(won: Bool) {
-        beeHintArmed = false
         guard won else {
             route = .miniGames
             return

@@ -42,6 +42,28 @@ enum PotTint: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cream: return Color(red: 0.93, green: 0.88, blue: 0.76)
         }
     }
+
+    /// Lighter lip on the pot mesh.
+    var rim: Color {
+        switch self {
+        case .terracotta: return Color(red: 0.88, green: 0.60, blue: 0.48)
+        case .sage: return Color(red: 0.66, green: 0.76, blue: 0.62)
+        case .blush: return Color(red: 0.94, green: 0.74, blue: 0.76)
+        case .midnight: return Color(red: 0.40, green: 0.44, blue: 0.58)
+        case .cream: return Color(red: 0.98, green: 0.94, blue: 0.86)
+        }
+    }
+
+    /// Darker saucer / pot foot.
+    var saucer: Color {
+        switch self {
+        case .terracotta: return Color(red: 0.58, green: 0.32, blue: 0.24)
+        case .sage: return Color(red: 0.34, green: 0.46, blue: 0.34)
+        case .blush: return Color(red: 0.64, green: 0.40, blue: 0.46)
+        case .midnight: return Color(red: 0.16, green: 0.18, blue: 0.30)
+        case .cream: return Color(red: 0.72, green: 0.64, blue: 0.50)
+        }
+    }
 }
 
 /// Spendable petal sinks beyond catching. Keep new offers in this table.
@@ -72,12 +94,12 @@ enum PetalOffer: String, CaseIterable, Identifiable, Sendable {
 
     var blurb: String {
         switch self {
-        case .mistAll: return "Water every living bed at once."
-        case .dewBurst: return "1.5× growth on all growing plants for 15 minutes."
+        case .mistAll: return "Water every living bed at once — plays a mist spray over the garden."
+        case .dewBurst: return "1.5× growth on all growing plants for 15 minutes, with a dew sparkle."
         case .organicPouch: return "One Organic fertilizer charge — 3× for 4 hours, 12h cooldown."
-        case .beeHint: return "Next Bee Trail highlights the next bloom. Consumed when you start a flight."
+        case .beeHint: return "A lantern bee visits planted flowers — 1.5× growth for about a minute."
         case .potSage, .potBlush, .potMidnight, .potCream:
-            return "Tint the garden pots. Purely cosmetic."
+            return "Glaze the pot mesh. Purely cosmetic."
         }
     }
 
@@ -109,7 +131,7 @@ enum PetalOffer: String, CaseIterable, Identifiable, Sendable {
         case .mistAll: return "drop.fill"
         case .dewBurst: return "sparkles"
         case .organicPouch: return "leaf.fill"
-        case .beeHint: return "lightbulb.fill"
+        case .beeHint: return "hexagon.fill"
         case .potSage, .potBlush, .potMidnight, .potCream: return "cup.and.saucer.fill"
         }
     }
