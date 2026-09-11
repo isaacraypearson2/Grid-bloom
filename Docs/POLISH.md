@@ -154,12 +154,14 @@ Winning Petal Catch + Pattern Bloom once also grants a single **Ultra** pack. Re
 
 ## Music
 
-Procedural 8-second looping WAVs generated in `GardenMusic.swift` — **no bundled stems**. Category `.ambient` (hardware silent switch + mix with others).
+Procedural 24-second looping WAVs generated in `GardenMusic.swift` — **no bundled stems**. Category `.ambient` (hardware silent switch + mix with others).
+
+A single hummed voice (fundamental + soft partials) slowly glides between neighbor tones — *hmmmmm, hummmmm, hmmmmm* — with a breathing swell. Not a stacked chord pad and not noise.
 
 | Bed | Where | Tone |
 | --- | --- | --- |
-| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards | Light pentatonic pad (C–E–G–C) |
-| Garden | **My Garden** only | Lower, slower drone |
+| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards | Higher hummed wander (C–D–E–D) over a quiet G pedal |
+| Garden | **My Garden** only | Lower, slower drone-hum (D–C–G–C) over a D2 pedal |
 | Off | Match play, scan, and the four mini-games | SFX only |
 
 Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off and the silent switch. Toggle Music after mute to restart the current bed.
