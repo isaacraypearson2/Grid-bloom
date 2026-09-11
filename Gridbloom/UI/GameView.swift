@@ -34,7 +34,6 @@ struct GameView: View {
     @State private var bannerCombo = 0
     @State private var paused = false
     @State private var showSettings = false
-    @State private var showOnboarding: Bool
     @State private var adMessage: String?
     @State private var matchBloom: MatchBloomFlash?
     var onExit: () -> Void
@@ -49,7 +48,6 @@ struct GameView: View {
         // autoclosure owns it. Never `let session = GameSession(...); _session = ...`
         // — that reconstructs GameState on every parent `body` evaluation.
         _session = StateObject(wrappedValue: GameSession(mode: mode))
-        _showOnboarding = State(initialValue: !AppSettings.shared.hasCompletedOnboarding)
     }
 
     var body: some View {
@@ -70,7 +68,7 @@ struct GameView: View {
                 SpriteView(scene: scene, options: [.allowsTransparency])
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(!paused && !game.isGameOver && adMessage == nil && !showOnboarding)
+                    .allowsHitTesting(!paused && !game.isGameOver && adMessage == nil)
             }
 
             if let matchBloom {
@@ -86,7 +84,7 @@ struct GameView: View {
                     .allowsHitTesting(false)
             }
 
-            if showOnboarding == false, game.score == 0, !paused, !game.isGameOver, profile.gamesPlayed <= 1 {
+            if game.score == 0, !paused, !game.isGameOver, profile.gamesPlayed <= 1 {
                 VStack {
                     Spacer()
                     Text("Drag a flower onto the garden")
@@ -113,7 +111,7 @@ struct GameView: View {
                 .transition(reduce ? .opacity : .scale.combined(with: .opacity))
             }
 
-            if game.isGameOver, adMessage == nil, !showOnboarding {
+            if game.isGameOver, adMessage == nil {
                 Color.black.opacity(0.28).ignoresSafeArea()
                 GameOverView(
                     theme: theme,
@@ -134,13 +132,6 @@ struct GameView: View {
             if let adMessage {
                 Color.black.opacity(0.32).ignoresSafeArea()
                 AdInterludeView(theme: theme, title: adMessage)
-            }
-
-            if showOnboarding {
-                OnboardingView(theme: theme) {
-                    settings.hasCompletedOnboarding = true
-                    showOnboarding = false
-                }
             }
         }
         .animation(reduce ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.78), value: game.isGameOver)

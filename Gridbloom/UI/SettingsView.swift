@@ -47,12 +47,9 @@ struct SettingsView: View {
             .padding(24)
         }
         .sheet(isPresented: $showHelp) {
-            ZStack {
-                GardenBackground(theme: theme)
-                OnboardingView(theme: theme) {
-                    settings.hasCompletedOnboarding = true
-                    showHelp = false
-                }
+            OnboardingView(theme: theme, isReplay: true) { _ in
+                settings.hasCompletedOnboarding = true
+                showHelp = false
             }
         }
     }

@@ -19,7 +19,7 @@ Unit tests: **Product → Test** (⌘U). Tests use `MockRewardedAdService` and n
 
 ## Try the slice
 
-- First launch shows a **short, skippable onboarding**.
+- First launch shows a **short, skippable intro** (at most five pages), then drops into **Classic Garden**.
 - **Play** is classic endless; **Today’s Bloom** is UTC-seeded with a streak chip.
 - Pause from the HUD. **Bloom revive** on game over is once per run and only after you tap it. **New tray** lives in pause — never an ad mid-drag.
 - Shop (**Greenhouse**): Garden Clay is free. Sakura, Moonlight, and Sunflower unlock by watching **one rewarded ad** each. Unlocks persist on device.

@@ -322,4 +322,56 @@ final class FeaturePassTests: XCTestCase {
         XCTAssertTrue(LeaderboardService.classicID.contains("classic"))
         XCTAssertTrue(LeaderboardService.dailyID.contains("daily"))
     }
+
+    func testIntroIsAtMostFivePagesAndCoversTheGardenLoop() {
+        XCTAssertLessThanOrEqual(OnboardingPage.allCases.count, IntroFlow.maxPages)
+        XCTAssertEqual(OnboardingPage.allCases.count, 5)
+        let blob = OnboardingPage.allCases
+            .map { $0.title + " " + $0.message }
+            .joined(separator: " ")
+            .lowercased()
+        XCTAssertTrue(blob.contains("row") || blob.contains("column"))
+        XCTAssertTrue(blob.contains("water"))
+        XCTAssertTrue(blob.contains("pack"))
+        XCTAssertTrue(blob.contains("album"))
+        XCTAssertTrue(blob.contains("petal catch") || blob.contains("mini"))
+    }
+
+    func testIntroDropsIntoClassicUnlessSkipped() {
+        XCTAssertEqual(IntroFlow.route(after: .completed), .play(.classic))
+        XCTAssertEqual(IntroFlow.route(after: .skipped), .menu)
+        XCTAssertEqual(
+            IntroFlow.initialRoute(seenIntro: false, completedOnboarding: false),
+            .intro
+        )
+        XCTAssertEqual(
+            IntroFlow.initialRoute(seenIntro: true, completedOnboarding: false),
+            .menu
+        )
+        XCTAssertFalse(IntroFlow.shouldShow(seenIntro: false, completedOnboarding: true))
+        XCTAssertFalse(IntroFlow.shouldShow(seenIntro: true, completedOnboarding: true))
+    }
+
+    func testSeenIntroPersistsAndMigratesFromSettings() {
+        let suiteName = "gridbloom.intro.\(UUID().uuidString)"
+        let suite = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        suite.removePersistentDomain(forName: suiteName)
+        let fresh = PlayerProfile(defaults: suite)
+        XCTAssertFalse(fresh.hasSeenIntro)
+        fresh.markIntroSeen()
+        XCTAssertTrue(fresh.hasSeenIntro)
+        XCTAssertTrue(suite.bool(forKey: "gridbloom.profile.seenIntro"))
+        XCTAssertTrue(suite.bool(forKey: "gridbloom.settings.onboarding"))
+
+        let reloaded = PlayerProfile(defaults: suite)
+        XCTAssertTrue(reloaded.hasSeenIntro)
+
+        let legacyName = "gridbloom.intro.legacy.\(UUID().uuidString)"
+        let legacy = try XCTUnwrap(UserDefaults(suiteName: legacyName))
+        legacy.removePersistentDomain(forName: legacyName)
+        legacy.set(true, forKey: "gridbloom.settings.onboarding")
+        let migrated = PlayerProfile(defaults: legacy)
+        XCTAssertTrue(migrated.hasSeenIntro)
+        XCTAssertTrue(legacy.bool(forKey: "gridbloom.profile.seenIntro"))
+    }
 }
