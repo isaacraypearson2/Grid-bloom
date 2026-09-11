@@ -125,16 +125,16 @@ enum CollectorProgress {
     static let newSpeciesBonus = 12
 
     static func totalXP(variants: Set<String>, species: Set<FlowerSpecies>, scans: Int) -> Int {
-        var xp = 0
+        var total = 0
         var countedSpecies = Set<FlowerSpecies>()
         for key in variants {
             guard let bloom = BloomVariant.parse(catalogKey: key) else { continue }
-            xp += xp(for: bloom.rarity)
+            total += xp(for: bloom.rarity)
             if countedSpecies.insert(bloom.species).inserted, species.contains(bloom.species) {
-                xp += newSpeciesBonus
+                total += newSpeciesBonus
             }
         }
-        xp += max(0, scans) * scanXP
-        return xp
+        total += max(0, scans) * scanXP
+        return total
     }
 }
