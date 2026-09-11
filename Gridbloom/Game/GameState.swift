@@ -36,6 +36,7 @@ final class GameState: ObservableObject {
     @Published private(set) var lastBloomCombo: Int = 0
     @Published private(set) var continuesUsed: Int = 0
     @Published private(set) var linesClearedThisRun: Int = 0
+    @Published private(set) var lastRunRewards: RunScoreRewards?
 
     static let maxContinuesPerRun = 1
 
@@ -43,6 +44,8 @@ final class GameState: ObservableObject {
     private let scoreStore: ScorePersisting
     private var profile: PlayerProfile?
     private var didRecordSessionStart = false
+    private var resolvedScoreRungs: Set<Int> = []
+    private var didGrantOrganicThisRun = false
 
     init(
         mode: GameMode,
@@ -145,6 +148,14 @@ final class GameState: ObservableObject {
         tray.map { $0?.catalogID ?? "-" }
     }
 
+    private var scoreLane: String {
+        switch mode {
+        case .classic: return "classic"
+        case .daily: return "daily"
+        case .stage(let id): return "stage.\(id)"
+        }
+    }
+
     func canPlace(_ piece: Piece, at origin: GridPoint) -> Bool {
         board.canPlace(piece, at: origin)
     }
@@ -231,6 +242,9 @@ final class GameState: ObservableObject {
         lastBloomCombo = 0
         continuesUsed = 0
         linesClearedThisRun = 0
+        resolvedScoreRungs = []
+        didGrantOrganicThisRun = false
+        lastRunRewards = nil
         // Keep the daily seed so Today's Bloom is a fresh run of the same deal sequence.
         if mode == .daily, let utcDay {
             dealer = FairDealer(rng: SplitMix64(seed: DailySeed.seed(fromUTCDay: utcDay)))
@@ -291,6 +305,25 @@ final class GameState: ObservableObject {
     func refreshGameOver() {
         let remaining = remainingPieces
         isGameOver = remaining.isEmpty || remaining.allSatisfy { !board.canPlaceAnywhere($0) }
+        if isGameOver {
+            grantPendingScoreRewards()
+        }
+    }
+
+    private func grantPendingScoreRewards() {
+        guard let profile else { return }
+        var rng = SplitMix64(seed: DailySeed.fnv1a64("score-pack|\(scoreLane)|\(utcDay ?? "")|\(score)"))
+        let result = ScorePackTable.awards(score: score, alreadyResolved: resolvedScoreRungs, rng: &rng)
+        resolvedScoreRungs = result.resolved
+        var organic = false
+        if !didGrantOrganicThisRun {
+            let day = utcDay ?? DailySeed.utcDayString()
+            organic = profile.shouldGrantOrganicForScore(score: score, utcDay: day)
+            if organic { didGrantOrganicThisRun = true }
+        }
+        guard !result.packs.isEmpty || organic else { return }
+        let rewards = profile.grantScoreRewards(RunScoreRewards(packs: result.packs, organicFertilizer: organic))
+        lastRunRewards = rewards
     }
 
     // MARK: - Test helpers

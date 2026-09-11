@@ -19,7 +19,9 @@ struct SettingsView: View {
                 }
 
                 VStack(spacing: 0) {
-                    toggleRow("Sound", isOn: $settings.soundEnabled, footnote: "Respects the silent switch.")
+                    toggleRow("Sound", isOn: $settings.soundEnabled, footnote: "Respects the silent switch. SFX for taps and blooms.")
+                    Divider().opacity(0.3)
+                    toggleRow("Music", isOn: $settings.musicEnabled, footnote: "Home and My Garden ambient loops. Also respects the silent switch.")
                     Divider().opacity(0.3)
                     toggleRow("Haptics", isOn: $settings.hapticsEnabled, footnote: nil)
                     Divider().opacity(0.3)

@@ -8,7 +8,10 @@ final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
     @Published var soundEnabled: Bool {
-        didSet { persist(soundEnabled, key: Keys.sound) }
+        didSet {
+            persist(soundEnabled, key: Keys.sound)
+            GardenMusic.shared.refresh()
+        }
     }
     @Published var hapticsEnabled: Bool {
         didSet { persist(hapticsEnabled, key: Keys.haptics) }
@@ -18,6 +21,12 @@ final class AppSettings: ObservableObject {
     }
     @Published var reduceMotion: Bool {
         didSet { persist(reduceMotion, key: Keys.reduceMotion) }
+    }
+    @Published var musicEnabled: Bool {
+        didSet {
+            persist(musicEnabled, key: Keys.music)
+            GardenMusic.shared.refresh()
+        }
     }
     @Published var hasCompletedOnboarding: Bool {
         didSet { persist(hasCompletedOnboarding, key: Keys.onboarding) }
@@ -34,6 +43,7 @@ final class AppSettings: ObservableObject {
         static let haptics = "gridbloom.settings.haptics"
         static let colorblind = "gridbloom.settings.colorblind"
         static let reduceMotion = "gridbloom.settings.reduceMotion"
+        static let music = "gridbloom.settings.music"
         static let onboarding = "gridbloom.settings.onboarding"
         static let theme = "gridbloom.settings.theme"
     }
@@ -52,6 +62,11 @@ final class AppSettings: ObservableObject {
         }
         colorblindPalette = defaults.bool(forKey: Keys.colorblind)
         reduceMotion = defaults.bool(forKey: Keys.reduceMotion)
+        if defaults.object(forKey: Keys.music) == nil {
+            musicEnabled = true
+        } else {
+            musicEnabled = defaults.bool(forKey: Keys.music)
+        }
         hasCompletedOnboarding = defaults.bool(forKey: Keys.onboarding)
         selectedThemeID = defaults.string(forKey: Keys.theme) ?? CosmeticPack.garden.rawValue
         isHydrating = false

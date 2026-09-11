@@ -17,7 +17,7 @@ struct AlbumView: View {
                         Text("Flower album")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("\(profile.collectedVariantIDs.count)/\(BloomCatalog.allVariants.count) variants  ·  \(profile.collectedFlowers.count) species  ·  \(profile.customBlooms.count) scanned  ·  \(profile.gardenRank.title)")
+                        Text("\(profile.collectedVariantIDs.count)/\(BloomCatalog.allVariants.count) variants  ·  \(profile.albumXP) XP  ·  \(profile.gardenRank.title)")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -68,12 +68,15 @@ struct AlbumView: View {
                 }
 
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 12) {
-                        ForEach(profile.customBlooms) { bloom in
-                            customCard(bloom)
-                        }
-                        ForEach(FlowerSpecies.allCases) { species in
-                            speciesCard(species)
+                    VStack(alignment: .leading, spacing: 12) {
+                        collectorCard
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 12) {
+                            ForEach(profile.customBlooms) { bloom in
+                                customCard(bloom)
+                            }
+                            ForEach(FlowerSpecies.allCases) { species in
+                                speciesCard(species)
+                            }
                         }
                     }
                     .padding(.bottom, 16)
@@ -84,6 +87,44 @@ struct AlbumView: View {
         .onAppear {
             profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
         }
+    }
+
+    private var collectorCard: some View {
+        let rank = profile.gardenRank
+        let next = rank.next
+        let currentXP = profile.albumXP
+        let floor = rank.xpNeeded
+        let ceiling = next?.xpNeeded ?? max(floor, currentXP)
+        let span = max(1, ceiling - floor)
+        let progress = next == nil ? 1.0 : min(1, Double(currentXP - floor) / Double(span))
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(rank.title)
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                    .foregroundColor(theme.ink)
+                Spacer()
+                Text("\(currentXP) XP")
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .foregroundColor(theme.accent)
+            }
+            ProgressView(value: progress)
+                .tint(theme.accent)
+            if let next {
+                Text("\(next.xpNeeded - currentXP) XP to \(next.title)")
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+            } else {
+                Text("The greenhouse knows your name.")
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+            }
+            Text("Variants, Ultra colors, and camera scans all count. \(profile.collectedFlowers.count) species · \(profile.customBlooms.count) scanned.")
+                .font(.system(.caption, design: .rounded))
+                .foregroundColor(theme.inkSoft)
+        }
+        .padding(14)
+        .background(theme.cream.opacity(0.88))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func speciesCard(_ species: FlowerSpecies) -> some View {
@@ -100,6 +141,12 @@ struct AlbumView: View {
                         .font(.system(.caption, design: .rounded))
                         .foregroundColor(theme.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
+                    if status != .locked {
+                        Text(BloomFacts.speciesFact(species))
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(theme.accent.opacity(0.95))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Spacer()
                 Text(statusLabel(status))
@@ -122,27 +169,38 @@ struct AlbumView: View {
     }
 
     private func colorRow(species: FlowerSpecies, color: BloomColor) -> some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(Color(species.profile.tint(for: color)))
-                .frame(width: 14, height: 14)
-            Text(color.title)
-                .font(.system(.caption, design: .rounded).weight(.semibold))
-                .foregroundColor(theme.ink)
-                .frame(width: 72, alignment: .leading)
-            ForEach(SeedRarity.allCases) { rarity in
-                let bloom = BloomVariant(species: species, color: color, rarity: rarity)
-                let status = profile.albumStatus(for: bloom)
-                Text(rarity.title.prefix(1))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(status == .collected ? .white : rarity.ink.opacity(status == .unlocked ? 0.9 : 0.35))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(
-                        (status == .collected ? rarity.fill : rarity.fill.opacity(status == .unlocked ? 0.28 : 0.12))
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .accessibilityLabel("\(rarity.title) \(color.title) \(species.title), \(statusLabel(status))")
+        let collected = SeedRarity.allCases.contains {
+            profile.albumStatus(for: BloomVariant(species: species, color: color, rarity: $0)) == .collected
+        }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color(species.profile.tint(for: color)))
+                    .frame(width: 14, height: 14)
+                Text(color.title)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundColor(theme.ink)
+                    .frame(width: 72, alignment: .leading)
+                ForEach(SeedRarity.allCases) { rarity in
+                    let bloom = BloomVariant(species: species, color: color, rarity: rarity)
+                    let status = profile.albumStatus(for: bloom)
+                    Text(rarity.title.prefix(1))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(status == .collected ? .white : rarity.ink.opacity(status == .unlocked ? 0.9 : 0.35))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(
+                            (status == .collected ? rarity.fill : rarity.fill.opacity(status == .unlocked ? 0.28 : 0.12))
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .accessibilityLabel("\(rarity.title) \(color.title) \(species.title), \(statusLabel(status))")
+                }
+            }
+            if collected {
+                Text(BloomFacts.variantFact(species: species, color: color))
+                    .font(.system(size: 10, design: .rounded))
+                    .foregroundColor(theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -165,7 +223,7 @@ struct AlbumView: View {
             Text(bloom.name)
                 .font(.system(.headline, design: .rounded).weight(.bold))
                 .foregroundColor(theme.ink)
-            Text(bloom.identifiedOnDevice ? "Spotted on-device. Plays in Classic Garden." : "Custom bloom from your photo. Plays in Classic Garden.")
+            Text(bloom.identifiedOnDevice ? "Spotted on-device. Plays in Classic Garden." : "Custom bloom from a camera scan. Plays in Classic Garden.")
                 .font(.system(.caption, design: .rounded))
                 .foregroundColor(theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)

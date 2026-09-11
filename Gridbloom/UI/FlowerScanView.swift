@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 import UIKit
 
 struct FlowerScanView: View {
@@ -7,9 +6,7 @@ struct FlowerScanView: View {
     var theme: BoardTheme
     var onClose: () -> Void
 
-    @State private var pickerItem: PhotosPickerItem?
     @State private var showCamera = false
-    @State private var sourceImage: UIImage?
     @State private var stamp: UIImage?
     @State private var draft: FlowerScanDraft?
     @State private var working = false
@@ -25,7 +22,7 @@ struct FlowerScanView: View {
                         Text("Scan a flower")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("Camera or a photo from your library. Classified on this iPhone — nothing is uploaded.")
+                        Text("Camera only — point at a real bloom. Classified on this iPhone; nothing is uploaded.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -33,18 +30,12 @@ struct FlowerScanView: View {
                     IconCircleButton(systemName: "xmark", label: "Close", theme: theme, action: onClose)
                 }
 
-                HStack(spacing: 12) {
-                    Button {
-                        showCamera = true
-                    } label: {
-                        scanButtonLabel("Camera", systemImage: "camera.fill")
-                    }
-                    .buttonStyle(.plain)
-
-                    PhotosPicker(selection: $pickerItem, matching: .images) {
-                        scanButtonLabel("Photo library", systemImage: "photo.on.rectangle")
-                    }
+                Button {
+                    openCamera()
+                } label: {
+                    scanButtonLabel("Open camera", systemImage: "camera.fill")
                 }
+                .buttonStyle(.plain)
 
                 if working {
                     ProgressView("Reading the bloom…")
@@ -78,11 +69,16 @@ struct FlowerScanView: View {
             }
             .ignoresSafeArea()
         }
-        .onChange(of: pickerItem) { item in
-            guard let item else { return }
-            pickerItem = nil
-            Task { await loadPicker(item) }
+    }
+
+    private func openCamera() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            errorText = "Camera is required to scan. Photo library is not used — try on an iPhone."
+            Haptics.error()
+            return
         }
+        errorText = nil
+        showCamera = true
     }
 
     private func scanButtonLabel(_ title: String, systemImage: String) -> some View {
@@ -126,34 +122,10 @@ struct FlowerScanView: View {
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    private func loadPicker(_ item: PhotosPickerItem) async {
-        await MainActor.run {
-            working = true
-            errorText = nil
-        }
-        do {
-            if let data = try await item.loadTransferable(type: Data.self),
-               let image = UIImage(data: data) {
-                await MainActor.run { process(image) }
-            } else {
-                await MainActor.run {
-                    working = false
-                    errorText = "Couldn’t read that photo."
-                }
-            }
-        } catch {
-            await MainActor.run {
-                working = false
-                errorText = "Couldn’t read that photo."
-            }
-        }
-    }
-
     private func process(_ image: UIImage) {
         working = true
         errorText = nil
         savedName = nil
-        sourceImage = image
         DispatchQueue.global(qos: .userInitiated).async {
             let analyzed = FlowerScanner.analyze(image)
             let stampImage = CustomBloomDisk.makeStamp(from: image)
@@ -185,7 +157,7 @@ struct CameraPicker: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        picker.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
+        picker.sourceType = .camera
         picker.delegate = context.coordinator
         picker.allowsEditing = true
         return picker

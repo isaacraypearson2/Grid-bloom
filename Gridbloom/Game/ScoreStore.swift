@@ -2,6 +2,7 @@ import Foundation
 
 protocol ScorePersisting {
     func best(for mode: GameMode, utcDay: String?) -> Int
+    func lifetimeBest(for mode: GameMode) -> Int
     @discardableResult
     func updateBest(for mode: GameMode, utcDay: String?, score: Int) -> Int
 }
@@ -10,6 +11,7 @@ final class UserDefaultsScoreStore: ScorePersisting {
     private let defaults: UserDefaults
     private let classicKey = "gridbloom.best.classic"
     private let dailyPrefix = "gridbloom.best.daily."
+    private let dailyLifetimeKey = "gridbloom.best.daily.lifetime"
     private let stagePrefix = "gridbloom.best.stage."
 
     init(defaults: UserDefaults = .standard) {
@@ -28,6 +30,17 @@ final class UserDefaultsScoreStore: ScorePersisting {
         }
     }
 
+    func lifetimeBest(for mode: GameMode) -> Int {
+        switch mode {
+        case .classic:
+            return defaults.integer(forKey: classicKey)
+        case .daily:
+            return defaults.integer(forKey: dailyLifetimeKey)
+        case .stage(let id):
+            return defaults.integer(forKey: stagePrefix + id)
+        }
+    }
+
     @discardableResult
     func updateBest(for mode: GameMode, utcDay: String?, score: Int) -> Int {
         let current = best(for: mode, utcDay: utcDay)
@@ -39,6 +52,8 @@ final class UserDefaultsScoreStore: ScorePersisting {
             if let utcDay {
                 defaults.set(next, forKey: dailyPrefix + utcDay)
             }
+            let life = max(defaults.integer(forKey: dailyLifetimeKey), score)
+            defaults.set(life, forKey: dailyLifetimeKey)
         case .stage(let id):
             defaults.set(next, forKey: stagePrefix + id)
         }
@@ -49,12 +64,21 @@ final class UserDefaultsScoreStore: ScorePersisting {
 final class InMemoryScoreStore: ScorePersisting {
     private var classic = 0
     private var daily: [String: Int] = [:]
+    private var dailyLifetime = 0
     private var stages: [String: Int] = [:]
 
     func best(for mode: GameMode, utcDay: String?) -> Int {
         switch mode {
         case .classic: return classic
         case .daily: return utcDay.flatMap { daily[$0] } ?? 0
+        case .stage(let id): return stages[id] ?? 0
+        }
+    }
+
+    func lifetimeBest(for mode: GameMode) -> Int {
+        switch mode {
+        case .classic: return classic
+        case .daily: return dailyLifetime
         case .stage(let id): return stages[id] ?? 0
         }
     }
@@ -68,6 +92,7 @@ final class InMemoryScoreStore: ScorePersisting {
         case .daily:
             let day = utcDay ?? ""
             daily[day] = max(daily[day] ?? 0, score)
+            dailyLifetime = max(dailyLifetime, score)
             return daily[day] ?? score
         case .stage(let id):
             stages[id] = max(stages[id] ?? 0, score)

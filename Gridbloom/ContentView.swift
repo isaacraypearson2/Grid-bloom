@@ -10,8 +10,11 @@ enum AppRoute: Equatable {
     case miniGames
     case petalCatch
     case patternBloom
+    case beeTrail
+    case bloomMatch
     case scanFlower
     case garden
+    case leaderboard
 }
 
 struct ContentView: View {
@@ -20,6 +23,8 @@ struct ContentView: View {
     @EnvironmentObject private var profile: PlayerProfile
     @State private var route: AppRoute = .menu
     @State private var miniGameToast: String?
+    @State private var beeHintArmed = false
+    @ObservedObject private var boards = LeaderboardService.shared
     private let scoreStore = UserDefaultsScoreStore()
 
     var body: some View {
@@ -29,8 +34,9 @@ struct ContentView: View {
             case .menu:
                 MainMenuView(
                     theme: theme,
-                    classicBest: scoreStore.best(for: .classic, utcDay: nil),
-                    dailyBest: scoreStore.best(for: .daily, utcDay: DailySeed.utcDayString()),
+                    classicBest: scoreStore.lifetimeBest(for: .classic),
+                    dailyBest: scoreStore.lifetimeBest(for: .daily),
+                    dailyToday: scoreStore.best(for: .daily, utcDay: DailySeed.utcDayString()),
                     utcDay: DailySeed.utcDayString(),
                     streak: profile.dailyStreak,
                     playedToday: profile.playedDailyToday,
@@ -50,7 +56,8 @@ struct ContentView: View {
                     onGarden: { route = .garden },
                     onSeedPacks: { route = .garden },
                     onShop: { route = .shop },
-                    onSettings: { route = .settings }
+                    onSettings: { route = .settings },
+                    onLeaderboard: { route = .leaderboard }
                 )
             case .play(let mode):
                 GameView(mode: mode, onExit: { route = .menu })
@@ -94,8 +101,17 @@ struct ContentView: View {
                     orchidUnlocked: profile.unlockedFlowers.contains(.orchid),
                     peonyUnlocked: profile.unlockedFlowers.contains(.peony),
                     greenhouseOwned: cosmetics.isOwned(.greenhouse),
+                    beeTrailWins: profile.miniGameWins(.beeTrail),
+                    bloomMatchWins: profile.miniGameWins(.bloomMatch),
+                    organicCharges: profile.organicFertilizerCharges,
                     onPetalCatch: { route = .petalCatch },
                     onPatternBloom: { route = .patternBloom },
+                    onBeeTrail: {
+                        beeHintArmed = profile.beeHints > 0
+                        _ = profile.consumeBeeHint()
+                        route = .beeTrail
+                    },
+                    onBloomMatch: { route = .bloomMatch },
                     onClose: { route = .menu }
                 )
             case .petalCatch:
@@ -111,6 +127,45 @@ struct ContentView: View {
                     onExit: { route = .miniGames },
                     onWin: finishPatternBloom
                 )
+            case .beeTrail:
+                BeeTrailView(
+                    theme: theme,
+                    highlightNext: beeHintArmed,
+                    onExit: { route = .miniGames },
+                    onFinished: finishBeeTrail
+                )
+            case .bloomMatch:
+                BloomMatchView(
+                    theme: theme,
+                    onExit: { route = .miniGames },
+                    onFinished: finishBloomMatch
+                )
+            case .leaderboard:
+                LeaderboardView(
+                    boards: boards,
+                    theme: theme,
+                    classicBest: scoreStore.lifetimeBest(for: .classic),
+                    dailyBest: scoreStore.lifetimeBest(for: .daily),
+                    dailyToday: scoreStore.best(for: .daily, utcDay: DailySeed.utcDayString()),
+                    utcDay: DailySeed.utcDayString(),
+                    onClose: { route = .menu }
+                )
+            }
+
+            if let ultra = profile.lastUltraBloom {
+                FullScreenMatchBloom(
+                    flash: MatchBloomFlash(
+                        species: ultra.species,
+                        title: "Ultra  \(ultra.fullTitle)",
+                        tint: ultra.swiftTint,
+                        stamp: nil,
+                        combo: 5
+                    ),
+                    reduced: settings.prefersReducedMotion
+                )
+                .transition(.opacity)
+                .zIndex(50)
+                .allowsHitTesting(false)
             }
 
             if let miniGameToast {
@@ -135,6 +190,20 @@ struct ContentView: View {
             profile.syncMapFlowers(ownedPacks: CosmeticPack.allCases.filter { cosmetics.isOwned($0) })
             _ = profile.grantMilestoneUltraIfEligible()
             profile.tickGarden()
+            boards.start()
+            applyMusic(for: route)
+        }
+        .onChange(of: route) { next in
+            applyMusic(for: next)
+        }
+        .onChange(of: profile.lastUltraBloom) { bloom in
+            guard bloom != nil else { return }
+            SoundPlayer.shared.bloom(combo: 5)
+            Haptics.success()
+            let hold = settings.prefersReducedMotion ? 0.45 : 1.15
+            DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+                profile.clearUltraBloom()
+            }
         }
     }
 
@@ -167,6 +236,50 @@ struct ContentView: View {
             showToast(first ? "Epic pack + Peony & Glasshouse" : "\(pack.title) seed pack")
         }
         route = .miniGames
+    }
+
+    private func finishBeeTrail(won: Bool) {
+        beeHintArmed = false
+        guard won else {
+            route = .miniGames
+            return
+        }
+        let first = profile.recordMiniGameWin(.beeTrail)
+        profile.addPetals(first ? MiniGameKind.beeTrail.winPetals : MiniGameKind.beeTrail.repeatPetals)
+        let pack = first ? MiniGameKind.beeTrail.winPack : MiniGameKind.beeTrail.repeatPack
+        _ = profile.grantPack(pack, source: MiniGameKind.beeTrail.rawValue)
+        if first || (profile.miniGameWins(.beeTrail) % 3 == 0) {
+            _ = profile.grantOrganicFertilizer()
+            showToast(first ? "Rare pack + Organic fertilizer" : "\(pack.title) pack + Organic")
+        } else {
+            showToast("\(pack.title) seed pack")
+        }
+        route = .miniGames
+    }
+
+    private func finishBloomMatch(won: Bool, mismatches: Int) {
+        guard won else {
+            route = .miniGames
+            return
+        }
+        let first = profile.recordMiniGameWin(.bloomMatch)
+        profile.addPetals(first ? MiniGameKind.bloomMatch.winPetals : MiniGameKind.bloomMatch.repeatPetals)
+        let perfect = mismatches <= 2
+        let pack: SeedRarity = perfect && !first ? .rare : (first ? MiniGameKind.bloomMatch.winPack : MiniGameKind.bloomMatch.repeatPack)
+        _ = profile.grantPack(pack, source: MiniGameKind.bloomMatch.rawValue)
+        showToast(perfect && !first ? "Clean match · Rare pack" : "\(pack.title) seed pack")
+        route = .miniGames
+    }
+
+    private func applyMusic(for route: AppRoute) {
+        switch route {
+        case .menu, .album, .miniGames, .settings, .shop, .stages, .leaderboard:
+            GardenMusic.shared.play(.home)
+        case .garden:
+            GardenMusic.shared.play(.garden)
+        case .play, .petalCatch, .patternBloom, .beeTrail, .bloomMatch, .scanFlower:
+            GardenMusic.shared.stop()
+        }
     }
 
     private func showToast(_ text: String) {

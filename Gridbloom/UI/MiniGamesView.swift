@@ -6,8 +6,13 @@ struct MiniGamesView: View {
     var orchidUnlocked: Bool
     var peonyUnlocked: Bool
     var greenhouseOwned: Bool
+    var beeTrailWins: Int
+    var bloomMatchWins: Int
+    var organicCharges: Int
     var onPetalCatch: () -> Void
     var onPatternBloom: () -> Void
+    var onBeeTrail: () -> Void
+    var onBloomMatch: () -> Void
     var onClose: () -> Void
 
     var body: some View {
@@ -19,7 +24,7 @@ struct MiniGamesView: View {
                         Text("Side gardens")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
                             .foregroundColor(theme.ink)
-                        Text("Short games that unlock seed packs, flowers, and maps. Classic Garden stays free to play.")
+                        Text("Short games that unlock seed packs, flowers, and Organic fertilizer. Classic Garden stays free to play.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundColor(theme.inkSoft)
                     }
@@ -27,22 +32,39 @@ struct MiniGamesView: View {
                     IconCircleButton(systemName: "xmark", label: "Close", theme: theme, action: onClose)
                 }
 
-                gameCard(
-                    title: MiniGameKind.petalCatch.title,
-                    blurb: MiniGameKind.petalCatch.blurb,
-                    reward: orchidUnlocked ? "Orchid collected · seed packs" : "Unlocks Orchid + Rare pack",
-                    systemImage: "leaf.fill",
-                    action: onPetalCatch
-                )
-                gameCard(
-                    title: MiniGameKind.patternBloom.title,
-                    blurb: MiniGameKind.patternBloom.blurb,
-                    reward: greenhouseOwned && peonyUnlocked ? "Peony, Glasshouse, seed packs" : "Unlocks Peony, Glasshouse + Epic pack",
-                    systemImage: "sparkles",
-                    action: onPatternBloom
-                )
-
-                Spacer()
+                ScrollView {
+                    VStack(spacing: 12) {
+                        gameCard(
+                            title: MiniGameKind.petalCatch.title,
+                            blurb: MiniGameKind.petalCatch.blurb,
+                            reward: orchidUnlocked ? "Orchid collected · seed packs" : "Unlocks Orchid + Rare pack",
+                            systemImage: "leaf.fill",
+                            action: onPetalCatch
+                        )
+                        gameCard(
+                            title: MiniGameKind.patternBloom.title,
+                            blurb: MiniGameKind.patternBloom.blurb,
+                            reward: greenhouseOwned && peonyUnlocked ? "Peony, Glasshouse, seed packs" : "Unlocks Peony, Glasshouse + Epic pack",
+                            systemImage: "sparkles",
+                            action: onPatternBloom
+                        )
+                        gameCard(
+                            title: MiniGameKind.beeTrail.title,
+                            blurb: MiniGameKind.beeTrail.blurb,
+                            reward: beeTrailWins == 0 ? "First win: Rare pack + Organic fertilizer" : "Repeats: Common pack · Organic every 3rd win (\(organicCharges) Organic)",
+                            systemImage: "hexagon.fill",
+                            action: onBeeTrail
+                        )
+                        gameCard(
+                            title: MiniGameKind.bloomMatch.title,
+                            blurb: MiniGameKind.bloomMatch.blurb,
+                            reward: bloomMatchWins == 0 ? "First win: Common pack" : "Repeats: Common pack · Rare if almost perfect",
+                            systemImage: "square.grid.2x2.fill",
+                            action: onBloomMatch
+                        )
+                    }
+                    .padding(.bottom, 16)
+                }
             }
             .padding(22)
         }

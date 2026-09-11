@@ -38,6 +38,7 @@ struct GameView: View {
     @State private var adMessage: String?
     @State private var matchBloom: MatchBloomFlash?
     var onExit: () -> Void
+    private let scoreStore = UserDefaultsScoreStore()
 
     private var game: GameState { session.game }
     private var scene: GameScene { session.scene }
@@ -116,8 +117,12 @@ struct GameView: View {
                 Color.black.opacity(0.28).ignoresSafeArea()
                 GameOverView(
                     theme: theme,
+                    modeTitle: modeTitle,
                     score: game.score,
                     best: game.bestScore,
+                    lifetimeBest: game.mode == .daily ? scoreStore.lifetimeBest(for: .daily) : nil,
+                    packs: game.lastRunRewards?.packs ?? [],
+                    organic: game.lastRunRewards?.organicFertilizer ?? false,
                     canContinue: game.canContinue,
                     onRestart: restart,
                     onContinue: requestContinue,
@@ -189,6 +194,12 @@ struct GameView: View {
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + (reduce ? 0.45 : 0.95)) {
                 withAnimation { showBloomBanner = false }
+            }
+        }
+        .onChange(of: game.isGameOver) { over in
+            guard over else { return }
+            Task { @MainActor in
+                LeaderboardService.shared.submit(score: game.score, mode: game.mode)
             }
         }
         .onChange(of: profile.lastClaimedGoalIDs) { ids in

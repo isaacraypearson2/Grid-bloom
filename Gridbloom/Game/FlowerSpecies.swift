@@ -59,11 +59,15 @@ enum FlowerSpecies: Int, CaseIterable, Codable, Identifiable, Equatable, Hashabl
 enum MiniGameKind: String, Codable, Equatable, Sendable {
     case petalCatch
     case patternBloom
+    case beeTrail
+    case bloomMatch
 
     var title: String {
         switch self {
         case .petalCatch: return "Petal Catch"
         case .patternBloom: return "Pattern Bloom"
+        case .beeTrail: return "Bee Trail"
+        case .bloomMatch: return "Bloom Match"
         }
     }
 
@@ -71,6 +75,8 @@ enum MiniGameKind: String, Codable, Equatable, Sendable {
         switch self {
         case .petalCatch: return "Tap falling petals before they wilt. Wins grant a seed pack (Rare first, then Common) and invite Orchid."
         case .patternBloom: return "Watch the bloom, repeat the pattern. First win: Peony, Glasshouse, and an Epic pack. Repeats: a Rare pack."
+        case .beeTrail: return "Follow the bee — tap blooms in visit order before time wilts. Harder flights can earn Organic fertilizer."
+        case .bloomMatch: return "Flip pairs of color variants. Finish under the mismatch cap for a seed pack."
         }
     }
 
@@ -78,6 +84,8 @@ enum MiniGameKind: String, Codable, Equatable, Sendable {
         switch self {
         case .petalCatch: return .rare
         case .patternBloom: return .epic
+        case .beeTrail: return .rare
+        case .bloomMatch: return .common
         }
     }
 
@@ -85,13 +93,16 @@ enum MiniGameKind: String, Codable, Equatable, Sendable {
         switch self {
         case .petalCatch: return .common
         case .patternBloom: return .rare
+        case .beeTrail: return .common
+        case .bloomMatch: return .common
         }
     }
 
-    var rewardFlower: FlowerSpecies {
+    var rewardFlower: FlowerSpecies? {
         switch self {
         case .petalCatch: return .orchid
         case .patternBloom: return .peony
+        case .beeTrail, .bloomMatch: return nil
         }
     }
 
@@ -99,6 +110,7 @@ enum MiniGameKind: String, Codable, Equatable, Sendable {
         switch self {
         case .petalCatch: return nil
         case .patternBloom: return .greenhouse
+        case .beeTrail, .bloomMatch: return nil
         }
     }
 
@@ -106,10 +118,21 @@ enum MiniGameKind: String, Codable, Equatable, Sendable {
         switch self {
         case .petalCatch: return 12
         case .patternBloom: return 16
+        case .beeTrail: return 14
+        case .bloomMatch: return 10
         }
     }
 
-    var repeatPetals: Int { 6 }
+    var repeatPetals: Int {
+        switch self {
+        case .beeTrail: return 8
+        default: return 6
+        }
+    }
+
+    var grantsOrganicOnFirstWin: Bool {
+        self == .beeTrail
+    }
 }
 
 enum FlowerUnlock: Equatable, Sendable {
@@ -120,28 +143,49 @@ enum FlowerUnlock: Equatable, Sendable {
     case seedPack(SeedRarity)
 }
 
-enum GardenRank: String, Equatable, Sendable {
-    case sprout
-    case gardener
-    case bloomkeeper
-    case florist
+enum GardenRank: String, Equatable, Sendable, CaseIterable {
+    case sproutScout
+    case meadowKeeper
+    case bloomSage
+    case greenhouseLegend
 
     var title: String {
         switch self {
-        case .sprout: return "Sprout"
-        case .gardener: return "Gardener"
-        case .bloomkeeper: return "Bloomkeeper"
-        case .florist: return "Master florist"
+        case .sproutScout: return "Sprout Scout"
+        case .meadowKeeper: return "Meadow Keeper"
+        case .bloomSage: return "Bloom Sage"
+        case .greenhouseLegend: return "Greenhouse Legend"
         }
     }
 
-    static func from(collectedCount: Int) -> GardenRank {
-        switch collectedCount {
-        case 0..<4: return .sprout
-        case 4..<8: return .gardener
-        case 8..<11: return .bloomkeeper
-        default: return .florist
+    var xpNeeded: Int {
+        switch self {
+        case .sproutScout: return 0
+        case .meadowKeeper: return 80
+        case .bloomSage: return 280
+        case .greenhouseLegend: return 800
         }
+    }
+
+    var next: GardenRank? {
+        switch self {
+        case .sproutScout: return .meadowKeeper
+        case .meadowKeeper: return .bloomSage
+        case .bloomSage: return .greenhouseLegend
+        case .greenhouseLegend: return nil
+        }
+    }
+
+    static func from(xp: Int) -> GardenRank {
+        var rank = GardenRank.sproutScout
+        for candidate in allCases where xp >= candidate.xpNeeded {
+            rank = candidate
+        }
+        return rank
+    }
+
+    static func from(collectedCount: Int) -> GardenRank {
+        from(xp: max(0, collectedCount) * 20)
     }
 }
 
