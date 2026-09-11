@@ -3,7 +3,7 @@ import Foundation
 
 /// Procedural zen loops. No bundled stems — in-memory WAVs, category `.ambient`.
 /// One hummed voice slowly changes pitch (hmmmmm → hummmmm → hmmmmm) with a
-/// breathing swell and shifting partials — not a static sine wash or noise bed.
+/// breathing swell, shifting partials, and a few distant bird chirps.
 final class GardenMusic {
     static let shared = GardenMusic()
 
@@ -115,7 +115,8 @@ final class GardenMusic {
             let pulse = 0.93 + spec.pulseDepth * sin(twoPi * spec.pulseHz * t)
             let fade = min(1, Double(i) / fadeSamples, Double(n - 1 - i) / fadeSamples)
 
-            let mix = (voice + detune) * spec.voiceGain * breath * pulse + pedal * (0.72 + 0.28 * breath)
+            let birds = chirpMix(t, chirps: spec.chirps) * (0.82 + 0.18 * (1 - breath))
+            let mix = (voice + detune) * spec.voiceGain * breath * pulse + pedal * (0.72 + 0.28 * breath) + birds
             let clamped = max(-1, min(1, mix * fade))
             samples[i] = Int16(clamped * Double(Int16.max - 1))
         }
@@ -125,6 +126,14 @@ final class GardenMusic {
     /// Sequential hummed centers (not a stacked chord). Last phrase glides back to the first.
     static func hummedPitch(_ t: Double, bed: Bed) -> Double {
         hummedPitch(t, spec: VoiceSpec(bed))
+    }
+
+    private struct Chirp {
+        let start: Double
+        let duration: Double
+        let f0: Double
+        let f1: Double
+        let gain: Double
     }
 
     private struct VoiceSpec {
@@ -148,6 +157,7 @@ final class GardenMusic {
         let h4Center: Double
         let h4Wander: Double
         let partialWanderHz: Double
+        let chirps: [Chirp]
 
         init(_ bed: Bed) {
             phraseSeconds = 6
@@ -173,6 +183,10 @@ final class GardenMusic {
                 h4Center = 0.07
                 h4Wander = 0.03
                 partialWanderHz = 1.0 / 12.0
+                chirps = [
+                    Chirp(start: 6.42, duration: 0.12, f0: 2_080, f1: 2_560, gain: 0.008),
+                    Chirp(start: 18.48, duration: 0.10, f0: 2_360, f1: 1_880, gain: 0.007)
+                ]
             case .garden:
                 // D3 → C3 → G2 → C3 — lower, wider, more drone-like.
                 pitches = [146.83, 130.81, 98.00, 130.81]
@@ -192,6 +206,13 @@ final class GardenMusic {
                 h4Center = 0.035
                 h4Wander = 0.015
                 partialWanderHz = 1.0 / 24.0
+                chirps = [
+                    Chirp(start: 6.38, duration: 0.13, f0: 1_680, f1: 2_280, gain: 0.014),
+                    Chirp(start: 6.60, duration: 0.11, f0: 2_160, f1: 1_720, gain: 0.011),
+                    Chirp(start: 12.35, duration: 0.15, f0: 1_460, f1: 1_940, gain: 0.012),
+                    Chirp(start: 18.42, duration: 0.11, f0: 2_480, f1: 1_980, gain: 0.010),
+                    Chirp(start: 18.60, duration: 0.10, f0: 2_040, f1: 1_640, gain: 0.008)
+                ]
             }
         }
     }
@@ -222,6 +243,25 @@ final class GardenMusic {
         let x = local / spec.phraseSeconds
         let swell = 0.5 - 0.5 * cos(2 * Double.pi * x)
         return spec.breathFloor + (1 - spec.breathFloor) * swell
+    }
+
+    private static func chirpMix(_ t: Double, chirps: [Chirp]) -> Double {
+        var mix = 0.0
+        for chirp in chirps {
+            let u = t - chirp.start
+            guard u >= 0, u <= chirp.duration, chirp.duration > 0, chirp.f0 > 0 else { continue }
+            let x = u / chirp.duration
+            let env = sin(Double.pi * x) * exp(-2.8 * x)
+            let ratio = chirp.f1 / chirp.f0
+            let phase: Double
+            if abs(ratio - 1) < 1e-4 {
+                phase = 2 * Double.pi * chirp.f0 * u
+            } else {
+                phase = 2 * Double.pi * chirp.f0 * chirp.duration / log(ratio) * (pow(ratio, x) - 1)
+            }
+            mix += (sin(phase) + 0.16 * sin(2 * phase)) * env * chirp.gain
+        }
+        return mix
     }
 
     private static func hummedPartialMix(phase: Double, spec: VoiceSpec, t: Double) -> Double {

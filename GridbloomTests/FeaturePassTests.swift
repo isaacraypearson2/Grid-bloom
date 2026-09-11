@@ -232,6 +232,13 @@ final class FeaturePassTests: XCTestCase {
         XCTAssertLessThan(gardenPeak, Int16.max)
         XCTAssertGreaterThan(homePeak, 2_000)
         XCTAssertGreaterThan(gardenPeak, 2_000)
+
+        let gardenChirp = goertzelEnergy(Array(garden[pcmRange(6.38, 0.36)]), hz: 1_900)
+        let gardenQuiet = goertzelEnergy(Array(garden[pcmRange(0.38, 0.36)]), hz: 1_900)
+        XCTAssertGreaterThan(gardenChirp, gardenQuiet * 8, "garden should have a brief high bird chirp")
+        let homeChirp = goertzelEnergy(Array(home[pcmRange(6.42, 0.16)]), hz: 2_200)
+        let homeQuiet = goertzelEnergy(Array(home[pcmRange(0.42, 0.16)]), hz: 2_200)
+        XCTAssertGreaterThan(homeChirp, homeQuiet * 8, "home should have a quieter distant chirp")
     }
 
     func testMusicPitchContourUsesDistinctHumCenters() {
@@ -251,6 +258,14 @@ final class FeaturePassTests: XCTestCase {
         return payload.withUnsafeBytes { buf in
             Array(buf.bindMemory(to: Int16.self))
         }
+    }
+
+    private func pcmRange(_ start: Double, _ duration: Double) -> Range<Int> {
+        let sr = GardenMusic.sampleRate
+        let limit = Int(sr * GardenMusic.loopDurationSeconds)
+        let from = min(limit - 1, max(0, Int(start * sr)))
+        let to = min(limit, max(from + 1, from + Int(duration * sr)))
+        return from..<to
     }
 
     private func rmsSlice(_ samples: [Int16], start: Double, duration: Double) -> Double {
@@ -274,6 +289,23 @@ final class FeaturePassTests: XCTestCase {
         guard !samples.isEmpty else { return 0 }
         let sum = samples.reduce(0.0) { $0 + Double($1) * Double($1) }
         return sqrt(sum / Double(samples.count))
+    }
+
+    private func goertzelEnergy(_ samples: [Int16], hz: Double) -> Double {
+        let n = samples.count
+        guard n > 4, hz > 0 else { return 0 }
+        let k = Int((Double(n) * hz / GardenMusic.sampleRate).rounded())
+        let omega = 2 * Double.pi * Double(k) / Double(n)
+        let coeff = 2 * cos(omega)
+        var s0 = 0.0
+        var s1 = 0.0
+        var s2 = 0.0
+        for sample in samples {
+            s0 = Double(sample) + coeff * s1 - s2
+            s2 = s1
+            s1 = s0
+        }
+        return s1 * s1 + s2 * s2 - coeff * s1 * s2
     }
 
     private func zeroCrossingRate(_ samples: [Int16]) -> Double {

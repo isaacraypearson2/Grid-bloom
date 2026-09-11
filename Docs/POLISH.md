@@ -156,7 +156,7 @@ Winning Petal Catch + Pattern Bloom once also grants a single **Ultra** pack. Re
 
 Procedural 24-second looping WAVs generated in `GardenMusic.swift` — **no bundled stems**. Category `.ambient` (hardware silent switch + mix with others).
 
-A single hummed voice (fundamental + soft partials) slowly glides between neighbor tones — *hmmmmm, hummmmm, hmmmmm* — with a breathing swell. Not a stacked chord pad and not noise.
+A single hummed voice (fundamental + soft partials) slowly glides between neighbor tones — *hmmmmm, hummmmm, hmmmmm* — with a breathing swell and a few distant procedural bird chirps (sparser on Home). Not a stacked chord pad and not noise.
 
 | Bed | Where | Tone |
 | --- | --- | --- |
