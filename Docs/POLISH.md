@@ -154,14 +154,32 @@ Winning Petal Catch + Pattern Bloom once also grants a single **Ultra** pack. Re
 
 ## Music
 
-Procedural 24-second looping WAVs generated in `GardenMusic.swift` — **no bundled stems**. Category `.ambient` (hardware silent switch + mix with others).
+Procedural **48-second** looping WAVs generated in `GardenMusic.swift` — **no bundled stems**, no third-party samples. Category `.ambient` (hardware silent switch + mix with others).
 
-A single hummed voice (fundamental + soft partials) slowly glides between neighbor tones — *hmmmmm, hummmmm, hmmmmm* — with a breathing swell and a few distant procedural bird chirps (sparser on Home). Not a stacked chord pad and not noise.
+### Mycelium metaphor (artistic, not a sim)
+
+Fungal networks show slow, irregular electrical spike trains — sparse voltage events, occasional bursts as a signal propagates, then long quiet. Gridbloom maps that idea onto music:
+
+| Bioelectric idea | What you hear |
+| --- | --- |
+| Resting potential | A very quiet warm pad that slowly breathes |
+| Action-potential spike | A short pitched tone with a fast attack, tiny pitch overshoot, and a gentle decay |
+| Propagating burst | 2–3 related tones a few hundred milliseconds apart |
+| Inter-spike interval | Real silence / near-silence between notes (the “air”) |
+| Soil / hyphae texture | Garden-only whisper of brown noise |
+
+Timing is authored with organic jitter (not a clock grid) so the loop does not feel like a hummed ostinato.
+
+### Mood
+
+Calm, sparse, warm, slightly melancholic-peaceful — the *feeling* of cozy video-game ambient (soft plucks, pad islands, space between notes). **Original synthesis only.** Do not copy, recreate, or approximate Minecraft / C418 (or any other) melodies or stems. Home and garden use original pentatonic floats (Bb-major-ish indoors, G-minor-ish earth), not a composed theme.
+
+Occasional soft procedural bird chirps stay in both beds (sparser / more distant on Home).
 
 | Bed | Where | Tone |
 | --- | --- | --- |
-| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards | Higher hummed wander (C–D–E–D) over a quiet G pedal |
-| Garden | **My Garden** only | Lower, slower drone-hum (D–C–G–C) over a D2 pedal |
+| Home | Menu, album, shop, settings, maps, mini-game list, leaderboards, intro | Softer, higher plucks + few spikes, distant chirps |
+| Garden | **My Garden** only | Earthier, more mycelium bursts, closer birds, hint of soil |
 | Off | Match play, scan, and the four mini-games | SFX only |
 
 Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off and the silent switch. Toggle Music after mute to restart the current bed.
@@ -188,7 +206,7 @@ Settings: **Sound** (SFX) and **Music** (beds). Music also respects Sound-off an
 8. Greenhouse: Meadow Clay is free. Glasshouse **Use** after Pattern Bloom. Desert Bloom **40 petals**. Sakura / Night / Sunflower still **Watch to unlock** (DEBUG `forceGoogleTestAds` if AdMob isn’t filling).
 9. Pause → New tray and game over → Bloom revive still require a tap; no mid-drag ads. Revive after 100 points should not grant a second Common pack; crossing 500 after revive should grant Rare.
 10. Today’s Bloom should still deal the same tray for a UTC day (unit tests cover this). Its high score must not overwrite Classic’s.
-11. Settings → Music off: home/garden loops stop. Sound off: SFX and music stop. Silent switch: both should duck (`.ambient`). Reduce Motion: full-screen bloom is a brief tint; watering FX is quieter.
+11. Settings → Music off: home/garden loops stop. Sound off: SFX and music stop. Silent switch: both should duck (`.ambient`). On Home, the bed should feel like sparse warm plucks with air between notes (not a flat hum); **My Garden** should be a bit earthier with more irregular “mycelium” pulses and closer bird chirps. Reduce Motion: full-screen bloom is a brief tint; watering FX is quieter.
 12. Home → **My Garden**: plant a starter. Grow copy should show **12:00** (Common), not 1:00. **Water** plays droplets. Beds stay hydrated for ~3 hours. **Watch for fertilizer** still 2×/2h/24h. Earn Organic (Bee Trail) and apply — 3×/4h/12h. Spend petals on mist / dew / a pot tint; pot lip color should change.
 13. Trophy on Home → Leaderboards. Classic and Daily cards are separate. Friends copy is “coming soon” unless Game Center is signed in and the two board IDs exist in App Store Connect.
 14. Leave a plant unwatered past the 3h + 20m + 40m wilt window — it should die, empty the bed, and sometimes return a salvaged seed. Harvest an Ultra variant (or open an Ultra pack) and confirm the full-screen Ultra bloom. In **Classic** or a flower map (not Today’s Bloom), complete a line that is mostly that Ultra bloom — the rest of the board should wipe with a GRID bloom.

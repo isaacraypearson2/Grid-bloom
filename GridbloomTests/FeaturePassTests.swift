@@ -200,30 +200,26 @@ final class FeaturePassTests: XCTestCase {
         let expectedPCM = Int(GardenMusic.sampleRate * GardenMusic.loopDurationSeconds) * 2
         XCTAssertEqual(home?.count, 44 + expectedPCM)
         XCTAssertEqual(garden?.count, 44 + expectedPCM)
+        XCTAssertEqual(GardenMusic.loopDurationSeconds, 48, accuracy: 0.01)
     }
 
-    func testMusicLoopsBreatheAndShiftPitch() {
+    func testMusicLoopsAreSparseMyceliumBeds() {
         let home = pcmSamples(GardenMusic.renderLoop(.home))
         let garden = pcmSamples(GardenMusic.renderLoop(.garden))
         XCTAssertFalse(home.isEmpty)
         XCTAssertFalse(garden.isEmpty)
 
-        let homePeakRMS = rmsSlice(home, start: 2.8, duration: 0.8)
-        let homeTroughRMS = rmsSlice(home, start: 5.7, duration: 0.5)
-        let gardenPeakRMS = rmsSlice(garden, start: 2.8, duration: 0.8)
-        let gardenTroughRMS = rmsSlice(garden, start: 5.7, duration: 0.5)
-        XCTAssertGreaterThan(homePeakRMS / max(homeTroughRMS, 1e-6), 1.45, "home should breathe")
-        XCTAssertGreaterThan(gardenPeakRMS / max(gardenTroughRMS, 1e-6), 1.25, "garden should breathe")
-        XCTAssertGreaterThan(homePeakRMS, 400)
-
-        let homeZCR = windowMetric(home, windows: 4, metric: zeroCrossingRate)
-        let gardenZCR = windowMetric(garden, windows: 4, metric: zeroCrossingRate)
-        XCTAssertGreaterThan(homeZCR.max()! / max(homeZCR.min()!, 1e-9), 1.08, "home pitch should wander")
-        XCTAssertGreaterThan(gardenZCR.max()! / max(gardenZCR.min()!, 1e-9), 1.08, "garden pitch should wander")
+        let homeWindows = windowMetric(home, windows: 16, metric: rms)
+        let gardenWindows = windowMetric(garden, windows: 16, metric: rms)
         XCTAssertGreaterThan(
-            homeZCR.reduce(0, +) / Double(homeZCR.count),
-            gardenZCR.reduce(0, +) / Double(gardenZCR.count),
-            "home hummed register should sit above garden"
+            homeWindows.max()! / max(homeWindows.min()!, 1e-6),
+            4.0,
+            "home should leave breathing space between tones"
+        )
+        XCTAssertGreaterThan(
+            gardenWindows.max()! / max(gardenWindows.min()!, 1e-6),
+            3.0,
+            "garden should still feel sparse, not a flat hum"
         )
 
         let homePeak = home.map { abs($0) }.max() ?? 0
@@ -233,23 +229,57 @@ final class FeaturePassTests: XCTestCase {
         XCTAssertGreaterThan(homePeak, 2_000)
         XCTAssertGreaterThan(gardenPeak, 2_000)
 
+        let homeCrest = Double(homePeak) / max(rms(home), 1e-6)
+        let gardenCrest = Double(gardenPeak) / max(rms(garden), 1e-6)
+        XCTAssertGreaterThan(homeCrest, 3.5, "home dynamics should read as notes, not a drone")
+        XCTAssertGreaterThan(gardenCrest, 3.5, "garden dynamics should read as notes, not a drone")
+
+        let homeZCR = windowMetric(home, windows: 6, metric: zeroCrossingRate)
+        let gardenZCR = windowMetric(garden, windows: 6, metric: zeroCrossingRate)
+        XCTAssertGreaterThan(
+            homeZCR.reduce(0, +) / Double(homeZCR.count),
+            gardenZCR.reduce(0, +) / Double(gardenZCR.count),
+            "home register should sit above the earthier garden bed"
+        )
+
         let gardenChirp = goertzelEnergy(Array(garden[pcmRange(6.38, 0.36)]), hz: 1_900)
-        let gardenQuiet = goertzelEnergy(Array(garden[pcmRange(0.38, 0.36)]), hz: 1_900)
-        XCTAssertGreaterThan(gardenChirp, gardenQuiet * 8, "garden should have a brief high bird chirp")
-        let homeChirp = goertzelEnergy(Array(home[pcmRange(6.42, 0.16)]), hz: 2_200)
-        let homeQuiet = goertzelEnergy(Array(home[pcmRange(0.42, 0.16)]), hz: 2_200)
-        XCTAssertGreaterThan(homeChirp, homeQuiet * 8, "home should have a quieter distant chirp")
+        let gardenQuiet = goertzelEnergy(Array(garden[pcmRange(2.20, 0.36)]), hz: 1_900)
+        XCTAssertGreaterThan(gardenChirp, gardenQuiet * 8, "garden should keep soft bird chirps")
+        let homeChirp = goertzelEnergy(Array(home[pcmRange(11.82, 0.16)]), hz: 2_200)
+        let homeQuiet = goertzelEnergy(Array(home[pcmRange(7.60, 0.16)]), hz: 2_200)
+        XCTAssertGreaterThan(homeChirp, homeQuiet * 8, "home should keep a quieter distant chirp")
     }
 
-    func testMusicPitchContourUsesDistinctHumCenters() {
-        let times = [1.0, 7.0, 13.0, 19.0]
-        let home = times.map { GardenMusic.hummedPitch($0, bed: .home) }
-        let garden = times.map { GardenMusic.hummedPitch($0, bed: .garden) }
-        XCTAssertGreaterThan(Set(home.map { ($0 * 10).rounded() }).count, 2)
-        XCTAssertGreaterThan(Set(garden.map { ($0 * 10).rounded() }).count, 2)
-        XCTAssertGreaterThan(home.min()!, garden.max()! - 20)
-        XCTAssertEqual(GardenMusic.hummedPitch(0, bed: .home), GardenMusic.hummedPitch(24, bed: .home), accuracy: 0.01)
-        XCTAssertEqual(GardenMusic.hummedPitch(0, bed: .garden), GardenMusic.hummedPitch(24, bed: .garden), accuracy: 0.01)
+    func testMyceliumPulseTrainIsIrregularAndPitched() {
+        let home = GardenMusic.pulseEvents(.home)
+        let garden = GardenMusic.pulseEvents(.garden)
+        XCTAssertGreaterThan(home.count, 8)
+        XCTAssertGreaterThan(garden.count, home.count, "garden should fire more mycelium events")
+        XCTAssertGreaterThan(home.filter { $0.kind == .spike }.count, 1)
+        XCTAssertGreaterThan(garden.filter { $0.kind == .spike }.count, 6)
+        XCTAssertTrue(home.contains { $0.kind == .pluck } && home.contains { $0.kind == .swell })
+        XCTAssertTrue(garden.contains { $0.kind == .pluck } && garden.contains { $0.kind == .swell })
+
+        let homePitches = Set(home.map { ($0.hz * 10).rounded() })
+        let gardenPitches = Set(garden.map { ($0.hz * 10).rounded() })
+        XCTAssertGreaterThan(homePitches.count, 3)
+        XCTAssertGreaterThan(gardenPitches.count, 3)
+        XCTAssertGreaterThan(
+            home.map(\.hz).reduce(0, +) / Double(home.count),
+            garden.map(\.hz).reduce(0, +) / Double(garden.count)
+        )
+
+        func gapRatio(_ events: [GardenMusic.PulseEvent]) -> Double {
+            let starts = events.map(\.start).sorted()
+            let gaps = zip(starts, starts.dropFirst()).map { $1 - $0 }
+            return (gaps.max() ?? 0) / max(gaps.min() ?? 1, 1e-6)
+        }
+        XCTAssertGreaterThan(gapRatio(home), 3, "home spike timing should be irregular")
+        XCTAssertGreaterThan(gapRatio(garden), 3, "garden spike timing should be irregular")
+
+        XCTAssertLessThan(GardenMusic.chirpStarts(.home).count, GardenMusic.chirpStarts(.garden).count)
+        XCTAssertEqual(GardenMusic.chirpStarts(.home).first, 11.82, accuracy: 0.01)
+        XCTAssertEqual(GardenMusic.chirpStarts(.garden).first, 6.38, accuracy: 0.01)
     }
 
     private func pcmSamples(_ data: Data?) -> [Int16] {

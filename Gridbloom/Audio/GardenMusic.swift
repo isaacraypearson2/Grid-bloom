@@ -2,8 +2,13 @@ import AVFoundation
 import Foundation
 
 /// Procedural zen loops. No bundled stems — in-memory WAVs, category `.ambient`.
-/// One hummed voice slowly changes pitch (hmmmmm → hummmmm → hmmmmm) with a
-/// breathing swell, shifting partials, and a few distant bird chirps.
+///
+/// Artistic map (not a science simulation): mycelium networks fire sparse,
+/// irregular bioelectric spikes. Those voltage-like events become soft pitched
+/// tones — plucks, short overshoot “spikes,” and slower pad swells — with
+/// organic timing jitter and quiet space between them. The *mood* is calm
+/// video-game ambient (warm, sparse, slightly melancholic) without copying
+/// any third-party melody or stem.
 final class GardenMusic {
     static let shared = GardenMusic()
 
@@ -12,9 +17,23 @@ final class GardenMusic {
         case garden
     }
 
-    /// Four 6-second hummed phrases. Modulation rates divide this so the loop seams.
-    static let loopDurationSeconds = 24.0
+    /// Long enough that the irregular spike train does not feel like a short phrase.
+    static let loopDurationSeconds = 48.0
     static let sampleRate = 22_050.0
+
+    enum PulseKind: String, Equatable {
+        case pluck
+        case spike
+        case swell
+    }
+
+    struct PulseEvent: Equatable {
+        let start: Double
+        let hz: Double
+        let duration: Double
+        let gain: Double
+        let kind: PulseKind
+    }
 
     private var player: AVAudioPlayer?
     private var current: Bed?
@@ -45,7 +64,8 @@ final class GardenMusic {
         do {
             let next = try AVAudioPlayer(data: data)
             next.numberOfLoops = -1
-            next.volume = bed == .garden ? 0.20 : 0.14
+            // Sparse beds need a little more playback gain than the old continuous hum.
+            next.volume = bed == .garden ? 0.34 : 0.30
             next.prepareToPlay()
             next.play()
             lock.lock()
@@ -85,47 +105,96 @@ final class GardenMusic {
         return data
     }
 
-    /// 24-second 22050 Hz mono 16-bit WAV of a hummed pitch contour plus a quiet pedal.
+    /// Authored mycelium events only (no delay tails). Home is softer / higher;
+    /// garden is denser and earthier.
+    static func pulseEvents(_ bed: Bed) -> [PulseEvent] {
+        BedSpec(bed).pulses
+    }
+
+    static func chirpStarts(_ bed: Bed) -> [Double] {
+        BedSpec(bed).chirps.map(\.start)
+    }
+
+    /// 48-second 22050 Hz mono 16-bit WAV: quiet warm pad + spike-train tones + birds.
     static func renderLoop(_ bed: Bed) -> Data? {
+        let spec = BedSpec(bed)
+        let pulses = spec.pulses + echoTails(spec.pulses)
         let n = Int(sampleRate * loopDurationSeconds)
         var samples = [Int16](repeating: 0, count: n)
         let twoPi = 2.0 * Double.pi
-        let spec = VoiceSpec(bed)
-        var voicePhase = 0.0
-        var detunePhase = 0.0
-        var pedalPhase = 0.0
-        let fadeSamples = 1_200.0
+        var padPhases = [Double](repeating: 0, count: spec.pads.count)
+        var detunePhases = [Double](repeating: 0, count: spec.pads.count)
+        var pulsePhases = [Double](repeating: 0, count: pulses.count)
+        let detuneRatio = pow(2.0, spec.detuneCents / 1_200.0)
+        var brown = 0.0
+        var rng: UInt64 = spec.soilSeed
+        let fadeSamples = 1_800.0
 
         for i in 0..<n {
             let t = Double(i) / sampleRate
-            let hz = hummedPitch(t, spec: spec)
-            let vibrato = pow(2.0, spec.vibratoCents * sin(twoPi * spec.vibratoHz * t) / 1_200.0)
-            let freq = hz * vibrato
+            var localBreath = t.truncatingRemainder(dividingBy: spec.breathSeconds)
+            if localBreath < 0 { localBreath += spec.breathSeconds }
+            let breathX = localBreath / spec.breathSeconds
+            let breath = spec.breathFloor + (1 - spec.breathFloor) * (0.5 - 0.5 * cos(twoPi * breathX))
+            let wander = 0.5 + 0.5 * sin(twoPi * t / 24.0)
 
-            let voice = hummedPartialMix(phase: voicePhase, spec: spec, t: t)
-            voicePhase = wrapPhase(voicePhase + twoPi * freq / sampleRate)
+            var pad = 0.0
+            for k in spec.pads.indices {
+                let partial = spec.pads[k]
+                let osc = sin(padPhases[k])
+                    + spec.padH2 * wander * sin(2 * padPhases[k])
+                    + spec.padH3 * sin(3 * padPhases[k])
+                    + 0.35 * sin(detunePhases[k])
+                pad += osc * partial.gain
+                padPhases[k] = wrapPhase(padPhases[k] + twoPi * partial.hz / sampleRate)
+                detunePhases[k] = wrapPhase(detunePhases[k] + twoPi * partial.hz * detuneRatio / sampleRate)
+            }
 
-            let detune = sin(detunePhase) * spec.detuneMix
-            detunePhase = wrapPhase(detunePhase + twoPi * freq * spec.detuneRatio / sampleRate)
+            var voice = 0.0
+            for k in pulses.indices {
+                let pulse = pulses[k]
+                let u = t - pulse.start
+                guard u >= 0, u <= pulse.duration else { continue }
+                let env: Double
+                let bright: Double
+                let freq: Double
+                switch pulse.kind {
+                case .pluck:
+                    env = pluckEnvelope(u, duration: pulse.duration)
+                    bright = 0.20
+                    freq = pulse.hz
+                case .spike:
+                    env = spikeEnvelope(u, duration: pulse.duration)
+                    bright = 0.38
+                    freq = pulse.hz * (1 + 0.016 * exp(-u / 0.045))
+                case .swell:
+                    env = swellEnvelope(u, duration: pulse.duration)
+                    bright = 0.16
+                    freq = pulse.hz
+                }
+                var osc = sin(pulsePhases[k]) + bright * sin(2 * pulsePhases[k])
+                if pulse.kind == .spike {
+                    osc += 0.10 * sin(3 * pulsePhases[k])
+                }
+                voice += osc * env * pulse.gain
+                pulsePhases[k] = wrapPhase(pulsePhases[k] + twoPi * freq / sampleRate)
+            }
 
-            let pedal = (sin(pedalPhase) + 0.28 * sin(2 * pedalPhase)) * spec.pedalGain
-            pedalPhase = wrapPhase(pedalPhase + twoPi * spec.pedalHz / sampleRate)
+            let birds = chirpMix(t, chirps: spec.chirps)
+            var dirt = 0.0
+            if spec.soilGain > 0 {
+                rng = rng &* 6_364_136_223_846_793_005 &+ 1
+                let white = Double(rng >> 11) / 9_007_199_254_740_992.0 * 2 - 1
+                brown = brown * 0.995 + white * 0.05
+                dirt = brown * spec.soilGain * (0.7 + 0.3 * breath)
+            }
 
-            let breath = phraseBreath(t, spec: spec)
-            let pulse = 0.93 + spec.pulseDepth * sin(twoPi * spec.pulseHz * t)
+            let mix = pad * (0.62 + 0.38 * breath) + voice + birds + dirt
             let fade = min(1, Double(i) / fadeSamples, Double(n - 1 - i) / fadeSamples)
-
-            let birds = chirpMix(t, chirps: spec.chirps) * (0.82 + 0.18 * (1 - breath))
-            let mix = (voice + detune) * spec.voiceGain * breath * pulse + pedal * (0.72 + 0.28 * breath) + birds
             let clamped = max(-1, min(1, mix * fade))
             samples[i] = Int16(clamped * Double(Int16.max - 1))
         }
         return wav(samples: samples, sampleRate: UInt32(sampleRate))
-    }
-
-    /// Sequential hummed centers (not a stacked chord). Last phrase glides back to the first.
-    static func hummedPitch(_ t: Double, bed: Bed) -> Double {
-        hummedPitch(t, spec: VoiceSpec(bed))
     }
 
     private struct Chirp {
@@ -136,113 +205,154 @@ final class GardenMusic {
         let gain: Double
     }
 
-    private struct VoiceSpec {
-        let pitches: [Double]
-        let phraseSeconds: Double
-        let glideSeconds: Double
-        let pedalHz: Double
-        let pedalGain: Double
-        let voiceGain: Double
-        let vibratoHz: Double
-        let vibratoCents: Double
-        let pulseHz: Double
-        let pulseDepth: Double
-        let detuneRatio: Double
-        let detuneMix: Double
+    private struct PadPartial {
+        let hz: Double
+        let gain: Double
+    }
+
+    private struct BedSpec {
+        let pads: [PadPartial]
+        let breathSeconds: Double
         let breathFloor: Double
-        let h2Center: Double
-        let h2Wander: Double
-        let h3Center: Double
-        let h3Wander: Double
-        let h4Center: Double
-        let h4Wander: Double
-        let partialWanderHz: Double
+        let padH2: Double
+        let padH3: Double
+        let detuneCents: Double
+        let soilGain: Double
+        let soilSeed: UInt64
+        let pulses: [PulseEvent]
         let chirps: [Chirp]
 
         init(_ bed: Bed) {
-            phraseSeconds = 6
-            glideSeconds = 1.35
-            detuneRatio = pow(2.0, 3.5 / 1_200.0)
             switch bed {
             case .home:
-                // C4 → D4 → E4 → D4 — close neighbor tones, pentatonic, not a held triad.
-                pitches = [261.63, 293.66, 329.63, 293.66]
-                pedalHz = 196.00
-                pedalGain = 0.022
-                voiceGain = 0.16
-                vibratoHz = 2.0 / 3.0
-                vibratoCents = 7
-                pulseHz = 1.0 / GardenMusic.loopDurationSeconds
-                pulseDepth = 0.05
-                detuneMix = 0.22
-                breathFloor = 0.34
-                h2Center = 0.40
-                h2Wander = 0.08
-                h3Center = 0.18
-                h3Wander = 0.07
-                h4Center = 0.07
-                h4Wander = 0.03
-                partialWanderHz = 1.0 / 12.0
+                // Softer indoor bed: Bb-major pentatonic float, fewer spikes, distant birds.
+                pads = [PadPartial(hz: 233.08, gain: 0.016), PadPartial(hz: 349.23, gain: 0.008)]
+                breathSeconds = 12
+                breathFloor = 0.22
+                padH2 = 0.28
+                padH3 = 0.10
+                detuneCents = 6.5
+                soilGain = 0
+                soilSeed = 0xC0FFEE
+                pulses = [
+                    PulseEvent(start: 0.92, hz: 233.08, duration: 2.70, gain: 0.155, kind: .pluck),
+                    PulseEvent(start: 4.85, hz: 293.66, duration: 2.40, gain: 0.138, kind: .pluck),
+                    PulseEvent(start: 9.40, hz: 174.61, duration: 5.60, gain: 0.088, kind: .swell),
+                    PulseEvent(start: 14.35, hz: 349.23, duration: 2.20, gain: 0.128, kind: .pluck),
+                    PulseEvent(start: 18.10, hz: 261.63, duration: 0.78, gain: 0.102, kind: .spike),
+                    PulseEvent(start: 18.56, hz: 293.66, duration: 0.60, gain: 0.074, kind: .spike),
+                    PulseEvent(start: 22.55, hz: 233.08, duration: 4.30, gain: 0.092, kind: .swell),
+                    PulseEvent(start: 27.20, hz: 392.00, duration: 2.20, gain: 0.100, kind: .pluck),
+                    PulseEvent(start: 31.15, hz: 261.63, duration: 2.50, gain: 0.118, kind: .pluck),
+                    PulseEvent(start: 36.40, hz: 293.66, duration: 4.80, gain: 0.080, kind: .swell),
+                    PulseEvent(start: 41.25, hz: 233.08, duration: 2.40, gain: 0.112, kind: .pluck),
+                    PulseEvent(start: 44.80, hz: 174.61, duration: 2.20, gain: 0.090, kind: .pluck)
+                ]
                 chirps = [
-                    Chirp(start: 6.42, duration: 0.12, f0: 2_080, f1: 2_560, gain: 0.008),
-                    Chirp(start: 18.48, duration: 0.10, f0: 2_360, f1: 1_880, gain: 0.007)
+                    Chirp(start: 11.82, duration: 0.11, f0: 2_080, f1: 2_560, gain: 0.008),
+                    Chirp(start: 28.62, duration: 0.10, f0: 2_360, f1: 1_880, gain: 0.007),
+                    Chirp(start: 39.55, duration: 0.09, f0: 1_980, f1: 2_420, gain: 0.0065)
                 ]
             case .garden:
-                // D3 → C3 → G2 → C3 — lower, wider, more drone-like.
-                pitches = [146.83, 130.81, 98.00, 130.81]
-                pedalHz = 73.42
-                pedalGain = 0.036
-                voiceGain = 0.18
-                vibratoHz = 0.5
-                vibratoCents = 5
-                pulseHz = 1.0 / GardenMusic.loopDurationSeconds
-                pulseDepth = 0.04
-                detuneMix = 0.16
-                breathFloor = 0.46
-                h2Center = 0.30
-                h2Wander = 0.06
-                h3Center = 0.11
-                h3Wander = 0.04
-                h4Center = 0.035
-                h4Wander = 0.015
-                partialWanderHz = 1.0 / 24.0
+                // More nature / mycelium: G-minor earth tones, bursty spike trains, closer birds.
+                pads = [
+                    PadPartial(hz: 98.00, gain: 0.022),
+                    PadPartial(hz: 146.83, gain: 0.012),
+                    PadPartial(hz: 116.54, gain: 0.007)
+                ]
+                breathSeconds = 16
+                breathFloor = 0.28
+                padH2 = 0.22
+                padH3 = 0.07
+                detuneCents = 5
+                soilGain = 0.006
+                soilSeed = 0xA11CE
+                pulses = [
+                    PulseEvent(start: 0.48, hz: 146.83, duration: 0.70, gain: 0.148, kind: .spike),
+                    PulseEvent(start: 0.98, hz: 174.61, duration: 0.58, gain: 0.118, kind: .spike),
+                    PulseEvent(start: 3.70, hz: 196.00, duration: 2.50, gain: 0.150, kind: .pluck),
+                    PulseEvent(start: 7.45, hz: 98.00, duration: 5.40, gain: 0.092, kind: .swell),
+                    PulseEvent(start: 11.60, hz: 233.08, duration: 2.25, gain: 0.136, kind: .pluck),
+                    PulseEvent(start: 14.35, hz: 146.83, duration: 0.72, gain: 0.152, kind: .spike),
+                    PulseEvent(start: 14.74, hz: 174.61, duration: 0.64, gain: 0.122, kind: .spike),
+                    PulseEvent(start: 15.18, hz: 196.00, duration: 0.72, gain: 0.100, kind: .spike),
+                    PulseEvent(start: 18.80, hz: 261.63, duration: 3.80, gain: 0.100, kind: .swell),
+                    PulseEvent(start: 22.70, hz: 174.61, duration: 2.30, gain: 0.138, kind: .pluck),
+                    PulseEvent(start: 26.15, hz: 146.83, duration: 0.68, gain: 0.140, kind: .spike),
+                    PulseEvent(start: 26.58, hz: 220.00, duration: 0.60, gain: 0.108, kind: .spike),
+                    PulseEvent(start: 29.40, hz: 196.00, duration: 2.50, gain: 0.126, kind: .pluck),
+                    PulseEvent(start: 33.10, hz: 116.54, duration: 2.80, gain: 0.110, kind: .pluck),
+                    PulseEvent(start: 37.05, hz: 146.83, duration: 0.66, gain: 0.136, kind: .spike),
+                    PulseEvent(start: 37.48, hz: 174.61, duration: 0.55, gain: 0.108, kind: .spike),
+                    PulseEvent(start: 37.95, hz: 233.08, duration: 0.62, gain: 0.090, kind: .spike),
+                    PulseEvent(start: 40.80, hz: 98.00, duration: 4.60, gain: 0.086, kind: .swell),
+                    PulseEvent(start: 45.20, hz: 196.00, duration: 2.20, gain: 0.120, kind: .pluck)
+                ]
                 chirps = [
                     Chirp(start: 6.38, duration: 0.13, f0: 1_680, f1: 2_280, gain: 0.014),
                     Chirp(start: 6.60, duration: 0.11, f0: 2_160, f1: 1_720, gain: 0.011),
-                    Chirp(start: 12.35, duration: 0.15, f0: 1_460, f1: 1_940, gain: 0.012),
-                    Chirp(start: 18.42, duration: 0.11, f0: 2_480, f1: 1_980, gain: 0.010),
-                    Chirp(start: 18.60, duration: 0.10, f0: 2_040, f1: 1_640, gain: 0.008)
+                    Chirp(start: 12.28, duration: 0.15, f0: 1_460, f1: 1_940, gain: 0.012),
+                    Chirp(start: 19.52, duration: 0.11, f0: 2_480, f1: 1_980, gain: 0.010),
+                    Chirp(start: 19.72, duration: 0.10, f0: 2_040, f1: 1_640, gain: 0.008),
+                    Chirp(start: 31.18, duration: 0.12, f0: 1_880, f1: 2_320, gain: 0.011),
+                    Chirp(start: 43.35, duration: 0.13, f0: 1_720, f1: 2_140, gain: 0.012),
+                    Chirp(start: 43.58, duration: 0.10, f0: 2_100, f1: 1_680, gain: 0.009)
                 ]
             }
         }
     }
 
-    private static func hummedPitch(_ t: Double, spec: VoiceSpec) -> Double {
-        let pitches = spec.pitches
-        let phrase = spec.phraseSeconds
-        let loop = loopDurationSeconds
-        var wrapped = t.truncatingRemainder(dividingBy: loop)
-        if wrapped < 0 { wrapped += loop }
-        var index = Int(wrapped / phrase)
-        if index >= pitches.count { index = pitches.count - 1 }
-        let local = wrapped - Double(index) * phrase
-        let current = pitches[index]
-        let next = pitches[(index + 1) % pitches.count]
-        let glideStart = phrase - spec.glideSeconds
-        guard local > glideStart, spec.glideSeconds > 0, current > 0, next > 0 else {
-            return current
+    /// Quiet delay tails so notes have a little air without a convolution reverb.
+    private static func echoTails(_ pulses: [PulseEvent]) -> [PulseEvent] {
+        var tails: [PulseEvent] = []
+        tails.reserveCapacity(pulses.count * 2)
+        for pulse in pulses where pulse.kind != .swell {
+            tails.append(
+                PulseEvent(
+                    start: pulse.start + 0.38,
+                    hz: pulse.hz * pow(2.0, -12.0 / 1_200.0),
+                    duration: min(pulse.duration * 0.85, 2.1),
+                    gain: pulse.gain * 0.20,
+                    kind: pulse.kind
+                )
+            )
+            tails.append(
+                PulseEvent(
+                    start: pulse.start + 0.78,
+                    hz: pulse.hz * pow(2.0, -24.0 / 1_200.0),
+                    duration: min(pulse.duration * 0.70, 1.7),
+                    gain: pulse.gain * 0.08,
+                    kind: pulse.kind
+                )
+            )
         }
-        let u = min(1, max(0, (local - glideStart) / spec.glideSeconds))
-        let s = u * u * (3 - 2 * u)
-        return current * pow(next / current, s)
+        return tails
     }
 
-    private static func phraseBreath(_ t: Double, spec: VoiceSpec) -> Double {
-        var local = t.truncatingRemainder(dividingBy: spec.phraseSeconds)
-        if local < 0 { local += spec.phraseSeconds }
-        let x = local / spec.phraseSeconds
-        let swell = 0.5 - 0.5 * cos(2 * Double.pi * x)
-        return spec.breathFloor + (1 - spec.breathFloor) * swell
+    private static func pluckEnvelope(_ u: Double, duration: Double) -> Double {
+        let attack = 0.028
+        guard u >= 0, u <= duration, duration > 0 else { return 0 }
+        if u < attack {
+            let x = u / attack
+            return x * x * (3 - 2 * x)
+        }
+        let x = (u - attack) / max(1e-9, duration - attack)
+        return exp(-2.6 * x) * (1 - 0.12 * x)
+    }
+
+    private static func spikeEnvelope(_ u: Double, duration: Double) -> Double {
+        let attack = 0.011
+        guard u >= 0, u <= duration, duration > 0 else { return 0 }
+        if u < attack {
+            return pow(u / attack, 0.7)
+        }
+        let x = (u - attack) / max(1e-9, duration - attack)
+        return exp(-4.8 * x)
+    }
+
+    private static func swellEnvelope(_ u: Double, duration: Double) -> Double {
+        guard u >= 0, u <= duration, duration > 0 else { return 0 }
+        return pow(sin(Double.pi * u / duration), 1.15)
     }
 
     private static func chirpMix(_ t: Double, chirps: [Chirp]) -> Double {
@@ -262,14 +372,6 @@ final class GardenMusic {
             mix += (sin(phase) + 0.16 * sin(2 * phase)) * env * chirp.gain
         }
         return mix
-    }
-
-    private static func hummedPartialMix(phase: Double, spec: VoiceSpec, t: Double) -> Double {
-        let wander = 2 * Double.pi * spec.partialWanderHz * t
-        let h2 = spec.h2Center + spec.h2Wander * sin(wander)
-        let h3 = spec.h3Center + spec.h3Wander * sin(wander + 1.7)
-        let h4 = spec.h4Center + spec.h4Wander * sin(wander * 0.5 + 0.6)
-        return sin(phase) + h2 * sin(2 * phase) + h3 * sin(3 * phase) + h4 * sin(4 * phase)
     }
 
     private static func wrapPhase(_ phase: Double) -> Double {
