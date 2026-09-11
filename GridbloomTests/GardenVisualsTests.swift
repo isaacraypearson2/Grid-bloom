@@ -49,8 +49,7 @@ final class GardenVisualsTests: XCTestCase {
         suite.set(2, forKey: "gridbloom.profile.beeHints")
         let profile = PlayerProfile(defaults: suite)
         XCTAssertEqual(profile.beeHints, 0)
-        XCTAssertGreaterThan(profile.beeLanternRemaining(), 119)
-        XCTAssertLessThan(profile.beeLanternRemaining(), 121)
+        XCTAssertEqual(profile.beeLanternRemaining(), 120, accuracy: 2)
     }
 
     func testLanternPersistsAcrossReload() throws {
